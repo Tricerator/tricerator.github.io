@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">
+
+    <title>Triceratorova kavárna</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="assets/css/bootstrap2.css" rel="stylesheet">
+
+
+    <!-- Custom styles for this template -->
+    <link href="assets/css/main2.css" rel="stylesheet">
+    <link href="assets/css/myStyles2.css" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="assets/js/hover.zoom.js"></script>
+    <script src="assets/js/hover.zoom.conf.js"></script>
+
+</head>
+
+<body>
+
+    <!-- Static navbar -->
+    <div class="navbar navbar-inverse navbar-static-top fixed-top" style="width: 100%; padding: 10px; position:fixed">
+        <div class="container fixed-top">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="#promenne">proměnné</a></li>
+                    <li><a href="#ify">if - else</a></li>
+                    <li><a href="#while">while</a></li>
+                    <li><a href="#for">for</a></li>
+                    <li><a href="#fce">funkce</a></li>
+                </ul>
+
+            </div>
+            <!--/.nav-collapse -->
+
+
+
+
+
+        </div>
+    </div>
+    <div class="container">
+        <h1>Tutoriál k Javascriptu</h1>
+
+        <div id="promenne">
+            <br>
+            <br>
+            <br>
+            <h2>Proměnné</h2>
+            <ol>
+                <li>
+                    <p>
+                        První program je pouhé vypsání čísel.
+                    </p>
+                    <pre>
+                        <code>
+let x, y, z;  // inicializuju 3 promenne
+x = 5;    // Dosadí 5 do x
+y = 6;    // Dosadí 6 to y
+z = x + y;  // Spočítá sumu  x a y do z
+                            
+document.write("Hodnota z je " + z + ".");
+                        </code>
+                      </pre>
+                </li>
+                <li>
+                    <p>Nyní si zkusíme čísla x a y načíst sami</p>
+                    <pre>
+                        <code>
+let x, y, z;  
+x = parseInt(prompt("Zadej x"));    // Načti x
+y = parseInt(prompt("Zadej y");    //  Načti y
+z = x + y;  // dosaď do z
+                            
+document.write("Hodnota z je " + z + ".");
+                        </code>
+                      </pre>
+                </li>
+                <li>
+                    <p>Můžeme načíst i textové řetězce a třeba sami sebe pozdravit</p>
+                    <p>Pozn. v angličtině ten progam funguje mnohem lepe...</p>
+                    <pre>
+                        <code>
+let jmeno, prijmeni;   // zasadne bez hacku a carek
+jmeno = prompt("Zadej jmeno");    // Načti jmeno
+prijmeni = prompt("Zadej prijmeni");    //  Načti prijmeni
+document.write("Ahoj " + jmeno + " " + prijmeni + "!");
+                        </code>
+                      </pre>
+                </li>
+            </ol>
+
+        </div>
+        <div id="ify">
+            <br>
+            <br>
+            <br>
+            <h2>If - else</h2>
+            <ol>
+                <li>
+                    <p>Pokud bude přečtené číslo větší než 50, bude velké, jinak bude malé</p>
+                    <pre>
+                        <code>
+let x = parseInt(prompt("Zadej x"));    // Načti x
+if (x > 50) {
+    document.write("Velké číslo")
+}                            
+else {
+    document.write("Prcek");                    
+}                    </code>
+                      </pre>
+
+                </li>
+                <li>
+                    <p>Máme oslavu, na které pouštíme pouze lidi, kteří jsou menší než 100 centimetrů, nebo mají mezi
+                        135 a 170<br />a nebo mají nad 200 centimetrů. (jsme sice podivíni, ale proč ne.)</p>
+                    <pre>
+                        <code>
+let x = parseInt(prompt("Zadej tvoji výšku"));    // Načti x
+if (x < 100) {
+    document.write("Můžeš jít na oslavu")
+}                    
+//        X je vetsi nez 130 A ZAROVEN je mensi nez 170        
+else if (x > 130 && x < 170) {
+    document.write("Můžeš jít na oslavu");                    
+}
+else if (x >200){
+    document.write("Můžeš jít na oslavu");
+} 
+else {
+    document.write("...nemůžeš jít na oslavu, jsi divný.");
+}
+// ten samý kód můžeme napsat efektivněji na pouhé if - else
+//  x < 100 NEBO (x < 170 A ZAROVEN x > 130 ) NEBO (x > 200)   
+if((x < 100) || (x < 170 && x > 130) || (x > 200)){
+    document.write("Můžeš jít na oslavu");
+} 
+else{
+    document.write("...nemůžeš jít na oslavu, jsi divný.");
+} 
+</code>
+                      </pre>
+
+                </li>
+
+            </ol>
+        </div>
+        <div id="while">
+            <ol>
+                <h2>While cyklus</h2>
+                <li>
+                    <p>Chtěj po uživateli, aby zadal 5 a pak ho pochval</p>
+                    <pre>
+                        <code>
+let volba = 0
+while (volba != 5){
+    volba = parseInt("Zadej 5")
+}
+document.write("Jsi sikulka, zadal jsi 5. :) ")                            
+</code>
+                      </pre>
+                </li>
+                <li>
+                    <p>Vypiš číslo tolikrát, jaká je jeho hodnota. Záporná čísla nevypisuj vůbec.</p>
+                    <pre>
+                    <code>
+//nezapomenout na zvedani citace
+let cislo = parseInt(prompt("Zadej cislo k opakovani"))
+let citac = 0
+while (cislo > citac ){
+document.write(cislo)
+citac = citac + 1
+}                            
+</code>
+                  </pre>
+
+                </li>
+            </ol>
+        </div>
+        <div id="for">
+            <ol>
+                <h2>For cyklus</h2>
+                <li>
+                    <p>Spočítej součet kladných mocnin do zadaného čísla.</p>
+                    <pre>
+                    <code>
+let cislo = parseInt(prompt("Zadej cislo"))
+suma = 0
+for(i = 1; i <= cislo; i++){
+    suma = suma + i*i*i*i*i
+}
+document.write(suma)                         
+</code>
+                  </pre>
+
+                </li>
+                <li>
+                    <p>Vypiš pět po sobě jdoucích čísel od čísla zadaného uživatelem.</p>
+                    <pre>
+                    <code>
+let cislo = parseInt(prompt("Zadej cislo"))
+for(i = cislo; i < cislo + 5; i++){
+    document.write(cislo + "<br>")
+}                       
+</code>
+                  </pre>
+
+                </li>
+            </ol>
+
+        </div>
+    </div>
+
+
+</body>
+
+</html>
