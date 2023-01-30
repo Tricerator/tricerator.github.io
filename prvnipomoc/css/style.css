@@ -117,15 +117,15 @@ input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focu
 }
 
 .btn-main:hover {
-  background: #e12454;
-  border-color: #e12454;
+  background: #af0707;
+  border-color: #af0707;
   color: #fff;
 }
 
 .btn-main-2 {
-  background: #e12454;
+  background: #af0707;
   color: #fff;
-  border-color: #e12454;
+  border-color: #af0707;
 }
 
 .btn-main-2:hover {
