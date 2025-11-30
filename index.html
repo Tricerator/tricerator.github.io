@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Jednoduchá hra – Ovoce na myš</title>
+<title>Jednoduchá hra – Ovoce</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -16,7 +16,7 @@
         padding: 10px;
         background: #333;
         color: white;
-        font-size: 20px;
+        font-size: 18px;
     }
 
     #gameArea {
@@ -71,13 +71,20 @@
 
     /* Animace textu v overlayi */
     #levelOverlay.visible #levelText {
-        animation: popIn 1.2s ease-out;
+        animation: popIn 1.0s ease-out;
     }
 
     @keyframes popIn {
         0%   { transform: scale(0.5); opacity: 0; }
-        50%  { transform: scale(1.15); opacity: 1; }
+        50%  { transform: scale(1.2); opacity: 1; }
         100% { transform: scale(1.0); opacity: 1; }
+    }
+
+    /* Trochu menší text HUD na úzkých displejích */
+    @media (max-width: 768px) {
+        #hud {
+            font-size: 14px;
+        }
     }
 </style>
 </head>
@@ -86,8 +93,8 @@
 <div id="hud">
     ⏱ Čas: <span id="time">0.0</span> s  
     | 🎯 Skóre: <span id="hit">0</span>/<span id="total">0</span>
-    | 🔥 Úroveň: <span id="level">1</span>
-    | P = pauza, mezerník = další level
+    | 🔥 Úroveň: <span id="level">1</span> (každých 10 zásahů)
+    | P = pauza, klik = start
 </div>
 
 <div id="gameArea"></div>
@@ -101,7 +108,7 @@
 <audio id="missSound" src="miss.wav" preload="auto"></audio>
 
 <script>
-let gameRunning   = false;  // hra startuje v pauze, nejdřív overlay level 1
+let gameRunning   = false;
 let time          = 0;
 let hit           = 0;
 let total         = 0;
@@ -110,18 +117,30 @@ let level         = 1;
 let timerInterval = null;
 let spawnInterval = null;
 
-// Základní parametry obtížnosti
-const baseSpawnDelay = 800;   // ms
-const baseLifetime   = 2000;  // ms (2 s)
-const baseSquareSize = 80;    // px
+// po kolika zásazích se zvedne level
+const HITS_PER_LEVEL = 10;
 
-const minSpawnDelay  = 250;
-const minLifetime    = 500;
-const minSquareSize  = 20;
+// základní parametry obtížnosti
+let baseSpawnDelay = 800;   // ms
+let baseLifetime   = 2000;  // ms
+let baseSquareSize = 80;    // px
 
-let spawnDelay  = baseSpawnDelay;
-let lifetime    = baseLifetime;
-let squareSize  = baseSquareSize;
+const minSpawnDelay = 250;
+const minLifetime   = 500;
+const minSquareSize = 20;
+
+// jednoduchý "detekce mobilu" podle šířky
+const isSmallScreen = window.innerWidth < 768;
+
+// pro malé displeje to trochu zlehčíme
+if (isSmallScreen) {
+    baseSquareSize = 100;
+    baseLifetime   = 2500;
+}
+
+let spawnDelay = baseSpawnDelay;
+let lifetime   = baseLifetime;
+let squareSize = baseSquareSize;
 
 const timeEl   = document.getElementById("time");
 const hitEl    = document.getElementById("hit");
@@ -181,12 +200,11 @@ function playSound(sound) {
 
 // ---- OBTÍŽNOST PODLE LEVELU ----
 function applyDifficultyForLevel() {
-    // level = 1 → základ
     const l = Math.max(1, level);
 
-    spawnDelay = Math.max(minSpawnDelay,  baseSpawnDelay  - (l - 1) * 60);
-    lifetime   = Math.max(minLifetime,    baseLifetime    - (l - 1) * 150);
-    squareSize = Math.max(minSquareSize,  baseSquareSize  - (l - 1) * 6);
+    spawnDelay = Math.max(minSpawnDelay, baseSpawnDelay - (l - 1) * 60);
+    lifetime   = Math.max(minLifetime,   baseLifetime   - (l - 1) * 150);
+    squareSize = Math.max(minSquareSize, baseSquareSize - (l - 1) * 6);
 }
 
 // ---- LEVEL OVERLAY ----
@@ -203,24 +221,24 @@ function showLevelOverlay(levelNumber) {
     // Zobrazit overlay
     levelOverlay.classList.add("visible");
 
-    // Po 1.5 s schovat overlay a pokračovat
+    // Po 1.2 s schovat overlay a pokračovat
     setTimeout(() => {
         levelOverlay.classList.remove("visible");
         gameRunning = true;
         startTimer();
         startSpawning();
-    }, 1500);
+    }, 1200);
 }
 
-// Spuštění dalšího levelu mezerníkem
-function nextLevel() {
-    // Když už je overlay viditelný, ignorujeme (ať se to neřetězí)
-    if (levelOverlay.classList.contains("visible")) return;
-
-    level++;
-    levelEl.textContent = level;
-    applyDifficultyForLevel();
-    showLevelOverlay(level);
+// ---- KONTROLA LEVELU PODLE SKÓRE ----
+function checkLevelUp() {
+    const newLevel = Math.floor(hit / HITS_PER_LEVEL) + 1;
+    if (newLevel > level) {
+        level = newLevel;
+        levelEl.textContent = level;
+        applyDifficultyForLevel();
+        showLevelOverlay(level);
+    }
 }
 
 // ---- GENEROVÁNÍ OVOCE ----
@@ -244,15 +262,23 @@ function spawnSquare() {
     total++;
     totalEl.textContent = total;
 
-    const onHit = () => {
+    let hitRegistered = false;
+
+    function onHit() {
+        if (hitRegistered) return;
+        hitRegistered = true;
+
         hit++;
         hitEl.textContent = hit;
         playSound(hitSound);
         square.remove();
-    };
+        checkLevelUp();
+    }
 
-    // Zásah přejetím myší (hover)
-    square.addEventListener("mouseenter", onHit, { once: true });
+    // Desktop: přejetí myší (pointerenter),
+    // Mobil: ťuknutí (pointerdown). Oba používají stejný handler.
+    square.addEventListener("pointerenter", onHit);
+    square.addEventListener("pointerdown", onHit);
 
     gameArea.appendChild(square);
 
@@ -277,13 +303,6 @@ function stopSpawning() {
 
 // ---- OVLÁDÁNÍ KLÁVESAMI ----
 document.addEventListener("keydown", e => {
-    // mezerník = další level
-    if (e.code === "Space") {
-        e.preventDefault(); // neodskrolovat stránku
-        nextLevel();
-        return;
-    }
-
     // P = pauza
     if (e.key.toLowerCase() === "p") {
         if (gameRunning) {
@@ -298,8 +317,8 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// ---- Klik do herní plochy = start z pauzy ----
-gameArea.addEventListener("mousedown", () => {
+// ---- Klik/tap do herní plochy = start z pauzy ----
+gameArea.addEventListener("pointerdown", () => {
     if (!gameRunning && !levelOverlay.classList.contains("visible")) {
         gameRunning = true;
         startTimer();
@@ -307,11 +326,10 @@ gameArea.addEventListener("mousedown", () => {
     }
 });
 
-// ---- START: nastavíme level 1 a ukážeme overlay ----
+// ---- START: level 1, overlay na začátku ----
 applyDifficultyForLevel();
 levelEl.textContent = level;
 showLevelOverlay(level);
-
 </script>
 
 </body>
