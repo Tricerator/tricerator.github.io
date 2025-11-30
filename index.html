@@ -94,7 +94,7 @@
     ⏱ Čas: <span id="time">0.0</span> s  
     | 🎯 Skóre: <span id="hit">0</span>/<span id="total">0</span>
     | 🔥 Úroveň: <span id="level">1</span> (každých 10 zásahů)
-    | P = pauza, klik = start
+    | P = pauza, klik/ťuk = start
 </div>
 
 <div id="gameArea"></div>
@@ -109,6 +109,8 @@
 
 <script>
 let gameRunning   = false;
+let waitingForLevelStart = false;
+
 let time          = 0;
 let hit           = 0;
 let total         = 0;
@@ -154,23 +156,18 @@ const levelText    = document.getElementById("levelText");
 const hitSound  = document.getElementById("hitSound");
 const missSound = document.getElementById("missSound");
 
-// Ovoce pro objekty
-const fruits = ["🍎","🍌","🍇","🍒","🍉","🍍","🍓","🥝"];
+// Ovoce pro levely – emoji a jména
+const levelFruitEmojis = ["🍎","🍌","🍇","🍓","🍒","🍍","🍉","🥝"];
+const levelFruitNames  = ["Jablko","Banán","Hrozny","Jahoda","Třešeň","Ananas","Meloun","Kiwi"];
 
-// Názvy ovoce pro levely (pro text v overlayi)
-const levelFruits = [
-    "🍎 Jablko",
-    "🍌 Banán",
-    "🍇 Hrozny",
-    "🍓 Jahoda",
-    "🍒 Třešeň",
-    "🍍 Ananas",
-    "🍉 Meloun",
-    "🥝 Kiwi"
-];
+function getFruitEmojiForLevel(l) {
+    const idx = (l - 1) % levelFruitEmojis.length;
+    return levelFruitEmojis[idx];
+}
 
-function randomFruit() {
-    return fruits[Math.floor(Math.random() * fruits.length)];
+function getFruitNameForLevel(l) {
+    const idx = (l - 1) % levelFruitNames.length;
+    return levelFruitNames[idx];
 }
 
 // ---- ČASOMÍRA ----
@@ -209,26 +206,35 @@ function applyDifficultyForLevel() {
 
 // ---- LEVEL OVERLAY ----
 function showLevelOverlay(levelNumber) {
-    const fruitName = levelFruits[(levelNumber - 1) % levelFruits.length];
+    const emoji = getFruitEmojiForLevel(levelNumber);
+    const name  = getFruitNameForLevel(levelNumber);
 
-    levelText.textContent = "LEVEL " + levelNumber + " – " + fruitName;
+    levelText.innerHTML = 
+        "LEVEL " + levelNumber + " – " + emoji + " " + name +
+        "<br><span style='font-size:0.4em;'>Klikni / ťukni pro start</span>";
 
     // Zastavit hru
     gameRunning = false;
     stopTimer();
     stopSpawning();
 
-    // Zobrazit overlay
+    waitingForLevelStart = true;
     levelOverlay.classList.add("visible");
-
-    // Po 1.2 s schovat overlay a pokračovat
-    setTimeout(() => {
-        levelOverlay.classList.remove("visible");
-        gameRunning = true;
-        startTimer();
-        startSpawning();
-    }, 1200);
 }
+
+function startLevelIfWaiting() {
+    if (!waitingForLevelStart) return;
+
+    waitingForLevelStart = false;
+    levelOverlay.classList.remove("visible");
+
+    gameRunning = true;
+    startTimer();
+    startSpawning();
+}
+
+// klik / ťuk na overlay = start levelu (PC + mobil)
+levelOverlay.addEventListener("pointerdown", startLevelIfWaiting);
 
 // ---- KONTROLA LEVELU PODLE SKÓRE ----
 function checkLevelUp() {
@@ -251,7 +257,9 @@ function spawnSquare() {
     square.style.width  = squareSize + "px";
     square.style.height = squareSize + "px";
     square.style.fontSize = (squareSize * 0.6) + "px";
-    square.textContent = randomFruit();
+
+    // Ovoce odpovídá aktuálnímu levelu:
+    square.textContent = getFruitEmojiForLevel(level);
 
     const areaW = gameArea.clientWidth  - squareSize;
     const areaH = gameArea.clientHeight - squareSize;
@@ -276,7 +284,7 @@ function spawnSquare() {
     }
 
     // Desktop: přejetí myší (pointerenter),
-    // Mobil: ťuknutí (pointerdown). Oba používají stejný handler.
+    // Mobil: ťuknutí (pointerdown). Oba stejné.
     square.addEventListener("pointerenter", onHit);
     square.addEventListener("pointerdown", onHit);
 
@@ -309,7 +317,7 @@ document.addEventListener("keydown", e => {
             gameRunning = false;
             stopTimer();
             stopSpawning();
-        } else {
+        } else if (!waitingForLevelStart) {
             gameRunning = true;
             startTimer();
             startSpawning();
@@ -317,9 +325,9 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// ---- Klik/tap do herní plochy = start z pauzy ----
+// ---- Klik/tap do herní plochy = start z pauzy (jen pokud nečekáme na level overlay) ----
 gameArea.addEventListener("pointerdown", () => {
-    if (!gameRunning && !levelOverlay.classList.contains("visible")) {
+    if (!gameRunning && !waitingForLevelStart) {
         gameRunning = true;
         startTimer();
         startSpawning();
