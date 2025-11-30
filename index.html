@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Jednoduchá hra – Červené čtverce</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #f0f0f0;
+    }
+
+    #hud {
+        padding: 10px;
+        background: #333;
+        color: white;
+        font-size: 20px;
+    }
+
+    #gameArea {
+        position: relative;
+        width: 100vw;
+        height: calc(100vh - 50px);
+        background: #eee;
+        overflow: hidden;
+        cursor: crosshair;
+    }
+
+    .square {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: red;
+        border-radius: 4px;
+    }
+</style>
+</head>
+<body>
+
+<div id="hud">
+    ⏱ Čas: <span id="time">0.0</span> s  
+    | 🎯 Skóre: <span id="hit">0</span>/<span id="total">0</span>
+    | P = pauza, klik = start
+</div>
+
+<div id="gameArea"></div>
+
+<script>
+let gameRunning = true;
+let time = 0;
+let hit = 0;
+let total = 0;
+let timerInterval = null;
+let spawnInterval = null;
+
+const timeEl = document.getElementById("time");
+const hitEl  = document.getElementById("hit");
+const totalEl = document.getElementById("total");
+const gameArea = document.getElementById("gameArea");
+
+// ---- ČASOMÍRA ----
+function startTimer() {
+    if (timerInterval) return;
+    timerInterval = setInterval(() => {
+        time += 0.1;
+        timeEl.textContent = time.toFixed(1);
+    }, 100);
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+}
+
+// ---- GENEROVÁNÍ ČTVEREČKŮ ----
+function spawnSquare() {
+    if (!gameRunning) return;
+
+    const square = document.createElement("div");
+    square.className = "square";
+
+    const areaW = gameArea.clientWidth - 40;
+    const areaH = gameArea.clientHeight - 40;
+
+    square.style.left = Math.random() * areaW + "px";
+    square.style.top = Math.random() * areaH + "px";
+
+    total++;
+    totalEl.textContent = total;
+
+    square.onclick = () => {
+        hit++;
+        hitEl.textContent = hit;
+        square.remove();
+    };
+
+    gameArea.appendChild(square);
+
+    // Čtverec zmizí po 1.2 s, pokud ho hráč netrefí
+    setTimeout(() => {
+        if (square.parentElement) square.remove();
+    }, 1200);
+}
+
+function startSpawning() {
+    if (spawnInterval) return;
+    spawnInterval = setInterval(spawnSquare, 800);
+}
+
+function stopSpawning() {
+    clearInterval(spawnInterval);
+    spawnInterval = null;
+}
+
+// ---- PAUZA (klávesa P) ----
+document.addEventListener("keydown", e => {
+    if (e.key.toLowerCase() === "p") {
+        if (gameRunning) {
+            gameRunning = false;
+            stopTimer();
+            stopSpawning();
+        } else {
+            gameRunning = true;
+            startTimer();
+            startSpawning();
+        }
+    }
+});
+
+// ---- Klik = start ze pauzy ----
+gameArea.addEventListener("mousedown", () => {
+    if (!gameRunning) {
+        gameRunning = true;
+        startTimer();
+        startSpawning();
+    }
+});
+
+// ---- Spuštění hry ihned po načtení ----
+startTimer();
+startSpawning();
+</script>
+
+</body>
+</html>
