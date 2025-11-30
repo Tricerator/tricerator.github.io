@@ -161,8 +161,8 @@ const hitSound  = document.getElementById("hitSound");
 const missSound = document.getElementById("missSound");
 
 // Ovoce pro levely – pořadí: 1 = TŘEŠEŇ
-const levelFruitEmojis = ["🍒","🍎","🍌","🍇","🍓","🍍","🍉","🥝"];
-const levelFruitNames  = ["Třešeň","Jablko","Banán","Hrozny","Jahoda","Ananas","Meloun","Kiwi"];
+const levelFruitEmojis = ["🍒","🍎","🍇","🍓","🍌","🍍","🍉","🥝"];
+const levelFruitNames  = ["Třešeň","Jablko","Hrozny","Jahoda","Banán","Ananas","Meloun","Kiwi"];
 
 function getFruitEmojiForLevel(l) {
     const idx = (l - 1) % levelFruitEmojis.length;
