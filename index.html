@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Jednoduchá hra – Červené čtverce</title>
+<title>Jednoduchá hra – Ovoce na myš</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -30,8 +30,54 @@
 
     .square {
         position: absolute;
-        background: red;
-        border-radius: 4px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 0, 0, 0.05); /* jemný hitbox */
+        user-select: none;
+    }
+
+    /* LEVEL OVERLAY */
+    #levelOverlay {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.85);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 60px;
+        font-weight: bold;
+        z-index: 9999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s linear;
+    }
+
+    #levelOverlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    #levelText {
+        text-align: center;
+        padding: 20px;
+        animation: none;
+    }
+
+    /* Animace textu v overlayi */
+    #levelOverlay.visible #levelText {
+        animation: popIn 1.2s ease-out;
+    }
+
+    @keyframes popIn {
+        0%   { transform: scale(0.5); opacity: 0; }
+        50%  { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1.0); opacity: 1; }
     }
 </style>
 </head>
@@ -41,17 +87,21 @@
     ⏱ Čas: <span id="time">0.0</span> s  
     | 🎯 Skóre: <span id="hit">0</span>/<span id="total">0</span>
     | 🔥 Úroveň: <span id="level">1</span>
-    | P = pauza, klik = start
+    | P = pauza, mezerník = další level
 </div>
 
 <div id="gameArea"></div>
 
-<!-- Jednoduché zvuky (nahraď své vlastní soubory) -->
+<div id="levelOverlay">
+    <div id="levelText"></div>
+</div>
+
+<!-- Zvuky (volitelné – můžeš nahradit nebo smazat) -->
 <audio id="hitSound" src="hit.wav" preload="auto"></audio>
 <audio id="missSound" src="miss.wav" preload="auto"></audio>
 
 <script>
-let gameRunning   = true;
+let gameRunning   = false;  // hra startuje v pauze, nejdřív overlay level 1
 let time          = 0;
 let hit           = 0;
 let total         = 0;
@@ -60,15 +110,18 @@ let level         = 1;
 let timerInterval = null;
 let spawnInterval = null;
 
-// Parametry obtížnosti
-let spawnDelay      = 800;   // ms – jak často se spawnuje
-const minSpawnDelay = 250;
+// Základní parametry obtížnosti
+const baseSpawnDelay = 800;   // ms
+const baseLifetime   = 2000;  // ms (2 s)
+const baseSquareSize = 80;    // px
 
-let lifetime        = 1200;  // ms – jak dlouho čtverec žije
-const minLifetime   = 500;
+const minSpawnDelay  = 250;
+const minLifetime    = 500;
+const minSquareSize  = 20;
 
-let squareSize      = 40;    // px – velikost čtverce
-const minSquareSize = 18;
+let spawnDelay  = baseSpawnDelay;
+let lifetime    = baseLifetime;
+let squareSize  = baseSquareSize;
 
 const timeEl   = document.getElementById("time");
 const hitEl    = document.getElementById("hit");
@@ -76,8 +129,30 @@ const totalEl  = document.getElementById("total");
 const levelEl  = document.getElementById("level");
 const gameArea = document.getElementById("gameArea");
 
+const levelOverlay = document.getElementById("levelOverlay");
+const levelText    = document.getElementById("levelText");
+
 const hitSound  = document.getElementById("hitSound");
 const missSound = document.getElementById("missSound");
+
+// Ovoce pro objekty
+const fruits = ["🍎","🍌","🍇","🍒","🍉","🍍","🍓","🥝"];
+
+// Názvy ovoce pro levely (pro text v overlayi)
+const levelFruits = [
+    "🍎 Jablko",
+    "🍌 Banán",
+    "🍇 Hrozny",
+    "🍓 Jahoda",
+    "🍒 Třešeň",
+    "🍍 Ananas",
+    "🍉 Meloun",
+    "🥝 Kiwi"
+];
+
+function randomFruit() {
+    return fruits[Math.floor(Math.random() * fruits.length)];
+}
 
 // ---- ČASOMÍRA ----
 function startTimer() {
@@ -100,38 +175,65 @@ function playSound(sound) {
         sound.currentTime = 0;
         sound.play();
     } catch (e) {
-        // Když prohlížeč blokuje zvuk, prostě to ignorujeme
+        // autoplay blok – ignorujeme
     }
 }
 
-// ---- OBTÍŽNOST ----
-function increaseDifficulty() {
-    // Každých 5 zásahů zvedneme úroveň
-    if (hit % 5 === 0) {
-        level++;
-        levelEl.textContent = level;
+// ---- OBTÍŽNOST PODLE LEVELU ----
+function applyDifficultyForLevel() {
+    // level = 1 → základ
+    const l = Math.max(1, level);
 
-        // Rychlejší spawn
-        spawnDelay = Math.max(minSpawnDelay, spawnDelay - 80);
-
-        // Kratší život
-        lifetime = Math.max(minLifetime, lifetime - 80);
-
-        // Menší čtverce
-        squareSize = Math.max(minSquareSize, squareSize - 2);
-
-        // Znovu spustit spawn s novým intervalem
-        restartSpawning();
-    }
+    spawnDelay = Math.max(minSpawnDelay,  baseSpawnDelay  - (l - 1) * 60);
+    lifetime   = Math.max(minLifetime,    baseLifetime    - (l - 1) * 150);
+    squareSize = Math.max(minSquareSize,  baseSquareSize  - (l - 1) * 6);
 }
 
-// ---- GENEROVÁNÍ ČTVEREČKŮ ----
+// ---- LEVEL OVERLAY ----
+function showLevelOverlay(levelNumber) {
+    const fruitName = levelFruits[(levelNumber - 1) % levelFruits.length];
+
+    levelText.textContent = "LEVEL " + levelNumber + " – " + fruitName;
+
+    // Zastavit hru
+    gameRunning = false;
+    stopTimer();
+    stopSpawning();
+
+    // Zobrazit overlay
+    levelOverlay.classList.add("visible");
+
+    // Po 1.5 s schovat overlay a pokračovat
+    setTimeout(() => {
+        levelOverlay.classList.remove("visible");
+        gameRunning = true;
+        startTimer();
+        startSpawning();
+    }, 1500);
+}
+
+// Spuštění dalšího levelu mezerníkem
+function nextLevel() {
+    // Když už je overlay viditelný, ignorujeme (ať se to neřetězí)
+    if (levelOverlay.classList.contains("visible")) return;
+
+    level++;
+    levelEl.textContent = level;
+    applyDifficultyForLevel();
+    showLevelOverlay(level);
+}
+
+// ---- GENEROVÁNÍ OVOCE ----
 function spawnSquare() {
     if (!gameRunning) return;
 
     const square = document.createElement("div");
     square.className = "square";
-    square.style.width  = square.style.height = squareSize + "px";
+
+    square.style.width  = squareSize + "px";
+    square.style.height = squareSize + "px";
+    square.style.fontSize = (squareSize * 0.6) + "px";
+    square.textContent = randomFruit();
 
     const areaW = gameArea.clientWidth  - squareSize;
     const areaH = gameArea.clientHeight - squareSize;
@@ -142,21 +244,19 @@ function spawnSquare() {
     total++;
     totalEl.textContent = total;
 
-    // ---- ZÁSÁH PŘEJETÍM MYŠÍ (mouseenter) ----
     const onHit = () => {
         hit++;
         hitEl.textContent = hit;
         playSound(hitSound);
         square.remove();
-        increaseDifficulty();
     };
 
-    // once:true = zavolá se jen jednou, žádné dvojí počítání
+    // Zásah přejetím myší (hover)
     square.addEventListener("mouseenter", onHit, { once: true });
 
     gameArea.appendChild(square);
 
-    // Čtverec zmizí po 'lifetime' ms, pokud ho hráč netrefí
+    // Zmizí po čase 'lifetime'
     setTimeout(() => {
         if (square.parentElement) {
             square.remove();
@@ -170,18 +270,21 @@ function startSpawning() {
     spawnInterval = setInterval(spawnSquare, spawnDelay);
 }
 
-function restartSpawning() {
-    stopSpawning();
-    startSpawning();
-}
-
 function stopSpawning() {
     clearInterval(spawnInterval);
     spawnInterval = null;
 }
 
-// ---- PAUZA (klávesa P) ----
+// ---- OVLÁDÁNÍ KLÁVESAMI ----
 document.addEventListener("keydown", e => {
+    // mezerník = další level
+    if (e.code === "Space") {
+        e.preventDefault(); // neodskrolovat stránku
+        nextLevel();
+        return;
+    }
+
+    // P = pauza
     if (e.key.toLowerCase() === "p") {
         if (gameRunning) {
             gameRunning = false;
@@ -195,18 +298,20 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// ---- Klik = start ze pauzy ----
+// ---- Klik do herní plochy = start z pauzy ----
 gameArea.addEventListener("mousedown", () => {
-    if (!gameRunning) {
+    if (!gameRunning && !levelOverlay.classList.contains("visible")) {
         gameRunning = true;
         startTimer();
         startSpawning();
     }
 });
 
-// ---- Spuštění hry ihned po načtení ----
-startTimer();
-startSpawning();
+// ---- START: nastavíme level 1 a ukážeme overlay ----
+applyDifficultyForLevel();
+levelEl.textContent = level;
+showLevelOverlay(level);
+
 </script>
 
 </body>
