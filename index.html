@@ -30,8 +30,6 @@
 
     .square {
         position: absolute;
-        width: 40px;
-        height: 40px;
         background: red;
         border-radius: 4px;
     }
@@ -42,23 +40,44 @@
 <div id="hud">
     ⏱ Čas: <span id="time">0.0</span> s  
     | 🎯 Skóre: <span id="hit">0</span>/<span id="total">0</span>
+    | 🔥 Úroveň: <span id="level">1</span>
     | P = pauza, klik = start
 </div>
 
 <div id="gameArea"></div>
 
+<!-- Jednoduché zvuky (nahraď své vlastní soubory) -->
+<audio id="hitSound" src="hit.wav" preload="auto"></audio>
+<audio id="missSound" src="miss.wav" preload="auto"></audio>
+
 <script>
-let gameRunning = true;
-let time = 0;
-let hit = 0;
-let total = 0;
+let gameRunning   = true;
+let time          = 0;
+let hit           = 0;
+let total         = 0;
+let level         = 1;
+
 let timerInterval = null;
 let spawnInterval = null;
 
-const timeEl = document.getElementById("time");
-const hitEl  = document.getElementById("hit");
-const totalEl = document.getElementById("total");
+// Parametry obtížnosti
+let spawnDelay      = 800;   // ms – jak často se spawnuje
+const minSpawnDelay = 250;
+
+let lifetime        = 1200;  // ms – jak dlouho čtverec žije
+const minLifetime   = 500;
+
+let squareSize      = 40;    // px – velikost čtverce
+const minSquareSize = 18;
+
+const timeEl   = document.getElementById("time");
+const hitEl    = document.getElementById("hit");
+const totalEl  = document.getElementById("total");
+const levelEl  = document.getElementById("level");
 const gameArea = document.getElementById("gameArea");
+
+const hitSound  = document.getElementById("hitSound");
+const missSound = document.getElementById("missSound");
 
 // ---- ČASOMÍRA ----
 function startTimer() {
@@ -74,39 +93,86 @@ function stopTimer() {
     timerInterval = null;
 }
 
+// ---- ZVUKY ----
+function playSound(sound) {
+    if (!sound) return;
+    try {
+        sound.currentTime = 0;
+        sound.play();
+    } catch (e) {
+        // Když prohlížeč blokuje zvuk, prostě to ignorujeme
+    }
+}
+
+// ---- OBTÍŽNOST ----
+function increaseDifficulty() {
+    // Každých 5 zásahů zvedneme úroveň
+    if (hit % 5 === 0) {
+        level++;
+        levelEl.textContent = level;
+
+        // Rychlejší spawn
+        spawnDelay = Math.max(minSpawnDelay, spawnDelay - 80);
+
+        // Kratší život
+        lifetime = Math.max(minLifetime, lifetime - 80);
+
+        // Menší čtverce
+        squareSize = Math.max(minSquareSize, squareSize - 2);
+
+        // Znovu spustit spawn s novým intervalem
+        restartSpawning();
+    }
+}
+
 // ---- GENEROVÁNÍ ČTVEREČKŮ ----
 function spawnSquare() {
     if (!gameRunning) return;
 
     const square = document.createElement("div");
     square.className = "square";
+    square.style.width  = square.style.height = squareSize + "px";
 
-    const areaW = gameArea.clientWidth - 40;
-    const areaH = gameArea.clientHeight - 40;
+    const areaW = gameArea.clientWidth  - squareSize;
+    const areaH = gameArea.clientHeight - squareSize;
 
     square.style.left = Math.random() * areaW + "px";
-    square.style.top = Math.random() * areaH + "px";
+    square.style.top  = Math.random() * areaH + "px";
 
     total++;
     totalEl.textContent = total;
 
-    square.onclick = () => {
+    // ---- ZÁSÁH PŘEJETÍM MYŠÍ (mouseenter) ----
+    const onHit = () => {
         hit++;
         hitEl.textContent = hit;
+        playSound(hitSound);
         square.remove();
+        increaseDifficulty();
     };
+
+    // once:true = zavolá se jen jednou, žádné dvojí počítání
+    square.addEventListener("mouseenter", onHit, { once: true });
 
     gameArea.appendChild(square);
 
-    // Čtverec zmizí po 1.2 s, pokud ho hráč netrefí
+    // Čtverec zmizí po 'lifetime' ms, pokud ho hráč netrefí
     setTimeout(() => {
-        if (square.parentElement) square.remove();
-    }, 1200);
+        if (square.parentElement) {
+            square.remove();
+            playSound(missSound);
+        }
+    }, lifetime);
 }
 
 function startSpawning() {
     if (spawnInterval) return;
-    spawnInterval = setInterval(spawnSquare, 800);
+    spawnInterval = setInterval(spawnSquare, spawnDelay);
+}
+
+function restartSpawning() {
+    stopSpawning();
+    startSpawning();
 }
 
 function stopSpawning() {
