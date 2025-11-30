@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Psaní slov – Levely</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #hud {
+        width: 100%;
+        background: #333;
+        color: white;
+        padding: 10px;
+        font-size: 20px;
+        text-align: center;
+    }
+
+    #menu {
+        margin-top: 40px;
+        text-align: center;
+    }
+
+    #game {
+        margin-top: 50px;
+        text-align: center;
+        display: none;
+        max-width: 900px;
+    }
+
+    #word {
+        font-size: 28px;
+        margin: 20px 0;
+        font-weight: bold;
+        white-space: pre-wrap;
+        text-align: left;
+    }
+
+    input, textarea {
+        font-size: 22px;
+        padding: 10px;
+        width: 90%;
+        margin-top: 10px;
+    }
+
+    textarea {
+        height: 200px;
+        resize: none;
+        font-family: Arial, sans-serif;
+    }
+
+    #result {
+        font-size: 24px;
+        margin-top: 15px;
+        height: 30px;
+    }
+
+    button {
+        font-size: 22px;
+        padding: 10px 20px;
+        margin: 10px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<div id="hud">
+    ⏱ Čas: <span id="time">0.0</span> s |  
+    ✔ Spravne: <span id="correct">0</span> |  
+    ✖ Spatne: <span id="wrong">0</span>
+</div>
+
+<!-- MENU -->
+<div id="menu">
+    <h1>Vyber level</h1>
+    <button onclick="startLevel(1)">Level 1 – Slova</button>
+    <button onclick="startLevel(2)">Level 2 – Vety</button>
+    <button onclick="startLevel(3)">Level 3 – Odstavce</button>
+</div>
+
+<!-- HRA -->
+<div id="game">
+    <div id="word">---</div>
+
+    <!-- input pro slova/vety -->
+    <input id="input" type="text" placeholder="pis sem..." autocomplete="off">
+
+    <!-- textarea pro odstavce -->
+    <textarea id="inputBig" placeholder="opis cely odstavec..." style="display:none;"></textarea>
+
+    <div id="result"></div>
+</div>
+
+<script>
+// ------------------------------------------------------
+// Level 1 – velký slovník
+// ------------------------------------------------------
+const words = [
+    "auto","pes","kocka","strom","dum","skola","stul","okno",
+    "slunce","hora","zamek","vlak","more","program","klavesnice",
+    "pocitac","kreslo","koberec","kvetina","hlina","brambory",
+    "rajce","hruska","stromek","letadlo","vozidlo","klavesy",
+    "mys","obrazovka","internet","jazyk","ucitel","student",
+    "kniha","pisen","zvire","pracovni","zahrada","stromisko"
+];
+
+// ------------------------------------------------------
+// Level 2 – věty bez diakritiky
+// ------------------------------------------------------
+const sentences = [
+    "Dnes je venku opravdu hezky",
+    "Auto stoji pred nasi skolou",
+    "Pes bezi po zelene louce",
+    "Velky dum stoji u lesa",
+    "Student pracuje na ukolu",
+    "Program dnes funguje spravne",
+    "Zitra pojedeme vlakem do mesta",
+    "Nase zahrada potrebuje vodu",
+    "Pocitac ma novou klavesnici",
+    "Kocka spi na kresle"
+].map(s => s.charAt(0).toUpperCase() + s.slice(1));
+
+// ------------------------------------------------------
+// Level 3 – odstavce bez diakritiky
+// ------------------------------------------------------
+const paragraphs = [
+`Dnes jsme se ve skole ucili o prirode. Ucitel nam vypravěl o tom,
+jak se zmenilo pocasi behem poslednich let. Mluvili jsme take o tom,
+proc je dulezite chranit zvirata i rostliny.`,
+
+`V sobotu jsme byli s rodinou na vylete. Videli jsme hodne stromu,
+nektere byly opravdu obrovske. Cestou jsme narazili i na potok,
+kde jsme si dali kratkou pauzu a odpocinuli si.`,
+
+`Minuly tyden jsme zacali novy projekt. Ma to byt dlouha prace,
+ktera bude obsahovat texty, obrazky i grafy. Pracujeme ve skupinach
+a kazda skupina ma jiny ukol. Uz se tesim na vysledky.`
+];
+
+let level = 1;
+let correct = 0;
+let wrong = 0;
+let time = 0;
+let timer = null;
+
+const timeEl = document.getElementById("time");
+const correctEl = document.getElementById("correct");
+const wrongEl = document.getElementById("wrong");
+const wordEl = document.getElementById("word");
+
+const inputEl = document.getElementById("input");
+const inputBig = document.getElementById("inputBig");
+
+const resultEl = document.getElementById("result");
+const menu = document.getElementById("menu");
+const game = document.getElementById("game");
+
+// ------------------------------------------------------
+// Čas
+// ------------------------------------------------------
+function startTimer() {
+    timer = setInterval(() => {
+        time += 0.1;
+        timeEl.textContent = time.toFixed(1);
+    }, 100);
+}
+
+// ------------------------------------------------------
+// Výběr textu podle levelu
+// ------------------------------------------------------
+function newWord() {
+    if (level === 1) {
+        wordEl.textContent = words[Math.floor(Math.random() * words.length)];
+    } 
+    else if (level === 2) {
+        wordEl.textContent = sentences[Math.floor(Math.random() * sentences.length)];
+    } 
+    else {
+        wordEl.textContent = paragraphs[Math.floor(Math.random() * paragraphs.length)];
+    }
+}
+
+// ------------------------------------------------------
+// Kontrola
+// ------------------------------------------------------
+function checkWord() {
+    const target = wordEl.textContent;
+    const typed = (level <= 2 ? inputEl.value.trim() : inputBig.value.trim());
+
+    if (typed === target) {
+        correct++;
+        resultEl.textContent = "Spravne!";
+        resultEl.style.color = "green";
+    } else {
+        wrong++;
+        resultEl.textContent = "Spatne!";
+        resultEl.style.color = "red";
+    }
+
+    correctEl.textContent = correct;
+    wrongEl.textContent = wrong;
+
+    inputEl.value = "";
+    inputBig.value = "";
+
+    newWord();
+}
+
+// ------------------------------------------------------
+// Start hry
+// ------------------------------------------------------
+function startLevel(lvl) {
+    level = lvl;
+    menu.style.display = "none";
+    game.style.display = "block";
+
+    // Reset
+    correct = 0;
+    wrong = 0;
+    time = 0;
+    timeEl.textContent = "0.0";
+    correctEl.textContent = 0;
+    wrongEl.textContent = 0;
+    resultEl.textContent = "";
+
+    // Přepnout inputy
+    if (level === 3) {
+        inputEl.style.display = "none";
+        inputBig.style.display = "block";
+    } else {
+        inputEl.style.display = "block";
+        inputBig.style.display = "none";
+    }
+
+    newWord();
+    startTimer();
+}
+
+// Enter u inputu
+inputEl.addEventListener("keydown", e => {
+    if (e.key === "Enter") checkWord();
+});
+
+// Enter u textarea
+inputBig.addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.ctrlKey) {  // Ctrl+Enter pro potvrzení
+        e.preventDefault();
+        checkWord();
+    }
+});
+</script>
+
+</body>
+</html>
