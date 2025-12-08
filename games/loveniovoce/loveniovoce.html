@@ -17,12 +17,13 @@
         background: #333;
         color: white;
         font-size: 18px;
+        line-height: 1.4;
     }
 
     #gameArea {
         position: relative;
         width: 100vw;
-        height: calc(100vh - 50px);
+        height: calc(100vh - 70px);
         background: #eee;
         overflow: hidden;
         cursor: crosshair;
@@ -38,7 +39,7 @@
         user-select: none;
     }
 
-    /* LEVEL OVERLAY */
+    /* LEVEL / GAME OVER OVERLAY */
     #levelOverlay {
         position: fixed;
         left: 0;
@@ -50,7 +51,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 60px;
+        font-size: 48px;
         font-weight: bold;
         z-index: 9999;
         opacity: 0;
@@ -92,9 +93,14 @@
 
 <div id="hud">
     ⏱ Čas: <span id="time">0.0</span> s  
-    | 🎯 Skóre: <span id="hit">0</span>/<span id="total">0</span>
+    | 🎯 Zásahy: <span id="hit">0</span>/<span id="total">0</span>
     | 🔥 Úroveň: <span id="level">1</span> (každých 10 zásahů)
-    | P = pauza (PC), dvojťuk/dvouprstý tap = pauza (mobil)
+    | 💗 Životy: <span id="lives">10</span>
+    <br>
+    ⭐ Skóre: <span id="score">0</span>
+    | ⚡ Combo: <span id="combo">0</span> (max: <span id="bestCombo">0</span>)
+    <br>
+    P = pauza (PC), dvojťuk/dvouprstý tap = pauza (mobil)
 </div>
 
 <div id="gameArea"></div>
@@ -110,11 +116,19 @@
 <script>
 let gameRunning           = false;
 let waitingForLevelStart  = false;
+let gameOver              = false;
 
 let time   = 0;
 let hit    = 0;
 let total  = 0;
 let level  = 1;
+
+// NOVÉ: skóre a životy
+let score      = 0;
+let combo      = 0;
+let bestCombo  = 0;
+const maxLives = 10;
+let lives      = maxLives;
 
 let timerInterval = null;
 let spawnInterval = null;
@@ -122,10 +136,10 @@ let spawnInterval = null;
 // po kolika zásazích se zvedne level
 const HITS_PER_LEVEL = 10;
 
-// základní parametry obtížnosti
-let baseSpawnDelay = 800;   // ms
-let baseLifetime   = 2000;  // ms
-let baseSquareSize = 80;    // px
+// základní parametry obtížnosti – POMALEJŠÍ START
+let baseSpawnDelay = 1200;   // ms (dříve 800)
+let baseLifetime   = 3000;   // ms (dříve 2000)
+let baseSquareSize = 80;     // px
 
 const minSpawnDelay = 250;
 const minLifetime   = 500;
@@ -137,7 +151,7 @@ const isSmallScreen = window.innerWidth < 768;
 // pro malé displeje to trochu zlehčíme
 if (isSmallScreen) {
     baseSquareSize = 100;
-    baseLifetime   = 2500;
+    baseLifetime   = 3200;
 }
 
 let spawnDelay = baseSpawnDelay;
@@ -148,11 +162,15 @@ let squareSize = baseSquareSize;
 const bottomSafeZone = isSmallScreen ? 80 : 0;
 const topSafeZone    = isSmallScreen ? 30 : 0;
 
-const timeEl   = document.getElementById("time");
-const hitEl    = document.getElementById("hit");
-const totalEl  = document.getElementById("total");
-const levelEl  = document.getElementById("level");
-const gameArea = document.getElementById("gameArea");
+const timeEl      = document.getElementById("time");
+const hitEl       = document.getElementById("hit");
+const totalEl     = document.getElementById("total");
+const levelEl     = document.getElementById("level");
+const livesEl     = document.getElementById("lives");
+const scoreEl     = document.getElementById("score");
+const comboEl     = document.getElementById("combo");
+const bestComboEl = document.getElementById("bestCombo");
+const gameArea    = document.getElementById("gameArea");
 
 const levelOverlay = document.getElementById("levelOverlay");
 const levelText    = document.getElementById("levelText");
@@ -200,196 +218,4 @@ function playSound(sound) {
 }
 
 // ---- OBTÍŽNOST PODLE LEVELU ----
-function applyDifficultyForLevel() {
-    const l = Math.max(1, level);
-
-    spawnDelay = Math.max(minSpawnDelay, baseSpawnDelay - (l - 1) * 60);
-    lifetime   = Math.max(minLifetime,   baseLifetime   - (l - 1) * 150);
-    squareSize = Math.max(minSquareSize, baseSquareSize - (l - 1) * 6);
-}
-
-// ---- LEVEL OVERLAY ----
-function showLevelOverlay(levelNumber) {
-    const emoji = getFruitEmojiForLevel(levelNumber);
-    const name  = getFruitNameForLevel(levelNumber);
-
-    levelText.innerHTML =
-        "LEVEL " + levelNumber + " – " + emoji + " " + name +
-        "<br><span style='font-size:0.4em;'>Klikni / ťukni pro start</span>";
-
-    clearAllSquares();
-
-    gameRunning = false;
-    stopTimer();
-    stopSpawning();
-
-    waitingForLevelStart = true;
-    levelOverlay.classList.add("visible");
-}
-
-function startLevelIfWaiting() {
-    if (!waitingForLevelStart) return;
-
-    waitingForLevelStart = false;
-    levelOverlay.classList.remove("visible");
-
-    gameRunning = true;
-    startTimer();
-    startSpawning();
-}
-
-// klik / ťuk na overlay = start levelu (PC + mobil)
-levelOverlay.addEventListener("pointerdown", startLevelIfWaiting);
-
-// ---- PAUZA ----
-function togglePause() {
-    if (waitingForLevelStart) return; // v overlay pauzu neřešíme
-
-    if (gameRunning) {
-        gameRunning = false;
-        stopTimer();
-        stopSpawning();
-    } else {
-        gameRunning = true;
-        startTimer();
-        startSpawning();
-    }
-}
-
-// PC: P = pauza
-document.addEventListener("keydown", e => {
-    if (e.key.toLowerCase() === "p") {
-        togglePause();
-    }
-});
-
-// Mobil: dvojťuk do hrací plochy = pauza
-let lastTapTime = 0;
-
-function handleTapPause() {
-    const now = Date.now();
-    if (now - lastTapTime < 300) { // druhý tap do 300 ms
-        togglePause();
-        lastTapTime = 0;
-    } else {
-        lastTapTime = now;
-    }
-}
-
-// Mobil: dvouprstý tap (dvěma prsty najednou) = pauza
-if (isSmallScreen) {
-    window.addEventListener("touchstart", e => {
-        if (e.touches.length >= 2) {
-            e.preventDefault();
-            togglePause();
-        }
-    }, { passive: false });
-}
-
-// ---- KONTROLA LEVELU PODLE SKÓRE ----
-function checkLevelUp() {
-    const newLevel = Math.floor(hit / HITS_PER_LEVEL) + 1;
-    if (newLevel > level) {
-        level = newLevel;
-        levelEl.textContent = level;
-        applyDifficultyForLevel();
-        showLevelOverlay(level);
-    }
-}
-
-// ---- GENEROVÁNÍ OVOCE ----
-function spawnSquare() {
-    if (!gameRunning) return;
-
-    const square = document.createElement("div");
-    square.className = "square";
-
-    square.style.width  = squareSize + "px";
-    square.style.height = squareSize + "px";
-    square.style.fontSize = (squareSize * 0.6) + "px";
-
-    // Ovoce odpovídá aktuálnímu levelu – JEN tohle jedno ovoce:
-    square.textContent = getFruitEmojiForLevel(level);
-
-    const areaW = gameArea.clientWidth  - squareSize;
-    const maxH  = gameArea.clientHeight - squareSize - bottomSafeZone;
-    const minY  = topSafeZone;
-    const areaH = Math.max(0, maxH - minY);
-
-    const x = Math.random() * Math.max(areaW, 0);
-    const y = minY + (areaH > 0 ? Math.random() * areaH : 0);
-
-    square.style.left = x + "px";
-    square.style.top  = y + "px";
-
-    total++;
-    totalEl.textContent = total;
-
-    let hitRegistered = false;
-
-    function onHit() {
-        if (hitRegistered) return;
-        hitRegistered = true;
-
-        hit++;
-        hitEl.textContent = hit;
-        playSound(hitSound);
-        square.remove();
-        checkLevelUp();
-    }
-
-    // Desktop: přejetí myší (pointerenter),
-    // Mobil i PC: ťuknutí/klik (pointerdown).
-    square.addEventListener("pointerenter", onHit);
-    square.addEventListener("pointerdown", onHit);
-
-    gameArea.appendChild(square);
-
-    // Zmizí po čase 'lifetime'
-    setTimeout(() => {
-        if (square.parentElement) {
-            square.remove();
-            playSound(missSound);
-        }
-    }, lifetime);
-}
-
-function startSpawning() {
-    if (spawnInterval) return;
-    spawnInterval = setInterval(spawnSquare, spawnDelay);
-}
-
-function stopSpawning() {
-    clearInterval(spawnInterval);
-    spawnInterval = null;
-}
-
-// odstraní všechny aktuální čtverce (např. při změně levelu)
-function clearAllSquares() {
-    const squares = document.querySelectorAll(".square");
-    squares.forEach(s => s.remove());
-}
-
-// ---- Klik/tap do herní plochy ----
-gameArea.addEventListener("pointerdown", e => {
-    // Mobilní dvojťuk pro pauzu
-    if (isSmallScreen && e.pointerType === "touch") {
-        handleTapPause();
-    }
-
-    // Start hry z pauzy (pokud zrovna nečekáme na overlay)
-    if (!gameRunning && !waitingForLevelStart) {
-        gameRunning = true;
-        startTimer();
-        startSpawning();
-    }
-});
-
-// ---- START: level 1, overlay na začátku ----
-applyDifficultyForLevel();
-levelEl.textContent = level;
-showLevelOverlay(level);
-</script>
-
-</body>
-</html>
+function applyDifficult
