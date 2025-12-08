@@ -173,9 +173,9 @@
         <h1>Lov ovoce</h1>
         <p>Zvol si režim hry:</p>
         <div class="buttons">
-            <button data-mode="basic">🍒 Základní hra</button>
-            <button data-mode="advanced">🛡 Pokročilá</button>
-            <button data-mode="moving">⚡ Pokročilá + pohyb ovoce</button>
+            <button data-mode="basic">🍀 Začátečník</button>
+            <button data-mode="advanced">🛡 Pokročilý</button>
+            <button data-mode="moving">⚡ Expert</button>
         </div>
         <p class="hint">Doporučení: pro ~10leté dítě začni „Základní hra“.</p>
     </div>
@@ -187,8 +187,9 @@
     | 🔥 Úroveň: <span id="level">1</span> (každých 10 zásahů)
     | 💗 Životy: <span id="lives">10</span>
     <br>
-    ⭐ Skóre: <span id="score">0</span>
+   ⭐ Skóre: <span id="score">0</span>
     | ⚡ Combo: <span id="combo">0</span> (max: <span id="bestCombo">0</span>)
+    | 🏆 Rekord: <span id="highscore">0</span>
     | 🎮 Režim: <span id="modeLabel">-</span>
     <br>
     P = pauza (PC), dvojťuk/dvouprstý tap = pauza (mobil)
@@ -236,6 +237,10 @@ let bestCombo  = 0;
 const maxLives = 10;
 let lives      = maxLives;
 
+// highscore (localStorage)
+let highscore = 0;
+const HIGHSCORE_KEY_PREFIX = "fruitGameHighscore_";
+
 let timerInterval = null;
 let spawnInterval = null;
 
@@ -277,6 +282,7 @@ const livesEl     = document.getElementById("lives");
 const scoreEl     = document.getElementById("score");
 const comboEl     = document.getElementById("combo");
 const bestComboEl = document.getElementById("bestCombo");
+const highscoreEl = document.getElementById("highscore");
 const modeLabelEl = document.getElementById("modeLabel");
 const gameArea    = document.getElementById("gameArea");
 
@@ -325,6 +331,38 @@ function getFruitNameForLevel(l) {
 
 function isBossLevel(l) {
     return isAdvancedMode() && l > 0 && l % BOSS_LEVEL_PERIOD === 0;
+}
+
+function getHighscoreKey() {
+    return HIGHSCORE_KEY_PREFIX + (gameMode || "unknown");
+}
+
+function loadHighscore() {
+    if (!gameMode) {
+        highscore = 0;
+        highscoreEl.textContent = "0";
+        return;
+    }
+    try {
+        const stored = localStorage.getItem(getHighscoreKey());
+        highscore = stored ? parseInt(stored, 10) || 0 : 0;
+    } catch (e) {
+        highscore = 0;
+    }
+    highscoreEl.textContent = highscore;
+}
+
+function updateHighscoreIfNeeded() {
+    if (!gameMode) return;
+    if (score > highscore) {
+        highscore = score;
+        highscoreEl.textContent = highscore;
+        try {
+            localStorage.setItem(getHighscoreKey(), String(highscore));
+        } catch (e) {
+            // localStorage může být zakázané – ignorujeme
+        }
+    }
 }
 
 // ---- ČASOMÍRA ----
@@ -439,6 +477,7 @@ function showGameOver() {
     levelText.innerHTML =
         "KONEC HRY" +
         "<br><span style='font-size:0.6em;'>Skóre: " + score + "</span>" +
+        "<br><span style='font-size:0.6em;'>Rekord: " + highscore + "</span>" +
         "<br><span style='font-size:0.6em;'>Nejlepší combo: " + bestCombo + "</span>" +
         "<br><span style='font-size:0.6em;'>Zásahy: " + hit + "/" + total + "</span>" +
         "<br><br><span style='font-size:0.5em;'>Klikni / ťukni pro novou hru (stejný režim)</span>";
@@ -485,15 +524,16 @@ function resetGame() {
 
     // popisek režimu v HUDu
     if (gameMode === MODE_BASIC) {
-        modeLabelEl.textContent = "Základní";
+        modeLabelEl.textContent = "Začátečník";
     } else if (gameMode === MODE_ADVANCED) {
-        modeLabelEl.textContent = "Pokročilá";
+        modeLabelEl.textContent = "Pokročilý";
     } else if (gameMode === MODE_MOVING) {
-        modeLabelEl.textContent = "Pokročilá + pohyb";
+        modeLabelEl.textContent = "Expert";
     } else {
         modeLabelEl.textContent = "-";
     }
 
+    loadHighscore();
     applyDifficultyForLevel();
     showLevelOverlay(level);
 }
@@ -588,6 +628,7 @@ function registerHit() {
 
     score += 10 * combo;
     scoreEl.textContent = score;
+    updateHighscoreIfNeeded();
 
     playSound(hitSound);
     checkLevelUp();
@@ -651,6 +692,7 @@ function spawnBoss() {
         bossHP--;
         score += 25;
         scoreEl.textContent = score;
+        updateHighscoreIfNeeded();
         playSound(hitSound);
 
         if (bossHP <= 0) {
@@ -683,6 +725,7 @@ function finishBossFight(success) {
     if (success) {
         score += 300;
         scoreEl.textContent = score;
+        updateHighscoreIfNeeded();
     } else {
         const penalty = BOSS_LIFE_PENALTY;
         combo = 0;
@@ -760,7 +803,7 @@ function startFruitMovement(square) {
     requestAnimationFrame(step);
 }
 
-// ---- MALÝ „POPUP“ TEXT (vylepšení navíc) ----
+// ---- MALÝ „POPUP“ TEXT ----
 function showFloatingText(text, x, y, color) {
     const el = document.createElement("div");
     el.textContent = text;
@@ -856,6 +899,7 @@ function spawnSquare() {
 
         square.remove();
 
+        // BOMBA: žádný zásah do skóre, ale -2 životy a combo pryč
         if (kind === "bomb" && isAdvancedMode()) {
             combo = 0;
             updateComboDisplay();
@@ -880,6 +924,7 @@ function spawnSquare() {
             if (kind === "gold") {
                 score += 150;
                 scoreEl.textContent = score;
+                updateHighscoreIfNeeded();
                 showFloatingText("+150", fx, fy, "#ffd700");
             } else if (kind === "heart") {
                 if (lives < maxLives) {
@@ -901,10 +946,15 @@ function spawnSquare() {
         startFruitMovement(square);
     }
 
+    // POZOR: bomba při timeoutu NEPENALIZUJE
     setTimeout(() => {
         if (square.parentElement) {
+            const kind = square.dataset.kind || "normal";
             square.remove();
-            registerMiss();
+            if (kind !== "bomb") {
+                // jen normální/pozitivní ovoce je "miss"
+                registerMiss();
+            }
         }
     }, lifetime);
 }
@@ -947,7 +997,9 @@ gameArea.addEventListener("pointerdown", e => {
 
 // --- START: zobrazí se menu, hra čeká na výběr režimu ---
 modeLabelEl.textContent = "-";
+highscoreEl.textContent = "0";
 </script>
+
 
 </body>
 </html>
