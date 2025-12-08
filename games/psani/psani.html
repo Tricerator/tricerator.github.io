@@ -20,8 +20,9 @@
         background: #333;
         color: white;
         padding: 10px;
-        font-size: 20px;
+        font-size: 18px;
         text-align: center;
+        line-height: 1.5;
     }
 
     #menu {
@@ -30,7 +31,7 @@
     }
 
     #game {
-        margin-top: 50px;
+        margin-top: 30px;
         text-align: center;
         display: none;
         max-width: 900px;
@@ -58,9 +59,15 @@
     }
 
     #result {
-        font-size: 24px;
+        font-size: 22px;
         margin-top: 15px;
-        height: 30px;
+        min-height: 40px;
+    }
+
+    #progress {
+        margin-top: 10px;
+        font-size: 18px;
+        color: #333;
     }
 
     button {
@@ -69,21 +76,29 @@
         margin: 10px;
         cursor: pointer;
     }
+
+    #endButtons {
+        margin-top: 20px;
+    }
 </style>
 </head>
 <body>
 
 <div id="hud">
-    ⏱ Čas: <span id="time">0.0</span> s |  
-    ✔ Spravne: <span id="correct">0</span> |  
-    ✖ Spatne: <span id="wrong">0</span>
+    ⏱ Čas: <span id="time">0.0</span> s |
+    ✔ Správně: <span id="correct">0</span> |
+    ✖ Špatně: <span id="wrong">0</span><br>
+    ⭐ Skóre: <span id="score">0</span> |
+    🔥 Série: <span id="streak">0</span> (max: <span id="bestStreak">0</span>) |
+    🎯 Přesnost: <span id="accuracy">0</span> %
 </div>
 
 <!-- MENU -->
 <div id="menu">
     <h1>Vyber level</h1>
+    <p>Level 1: jednotlivá slova • Level 2: věty • Level 3: celé odstavce</p>
     <button onclick="startLevel(1)">Level 1 – Slova</button>
-    <button onclick="startLevel(2)">Level 2 – Vety</button>
+    <button onclick="startLevel(2)">Level 2 – Věty</button>
     <button onclick="startLevel(3)">Level 3 – Odstavce</button>
 </div>
 
@@ -91,13 +106,19 @@
 <div id="game">
     <div id="word">---</div>
 
-    <!-- input pro slova/vety -->
-    <input id="input" type="text" placeholder="pis sem..." autocomplete="off">
+    <!-- input pro slova/věty -->
+    <input id="input" type="text" placeholder="piš sem..." autocomplete="off">
 
     <!-- textarea pro odstavce -->
-    <textarea id="inputBig" placeholder="opis cely odstavec..." style="display:none;"></textarea>
+    <textarea id="inputBig" placeholder="opiš celý odstavec..." style="display:none;"></textarea>
 
+    <div id="progress"></div>
     <div id="result"></div>
+
+    <div id="endButtons" style="display:none;">
+        <button onclick="restartSameLevel()">Hrát znovu</button>
+        <button onclick="backToMenu()">Zpět na výběr levelu</button>
+    </div>
 </div>
 
 <script>
@@ -133,7 +154,7 @@ const sentences = [
 // Level 3 – odstavce bez diakritiky
 // ------------------------------------------------------
 const paragraphs = [
-`Dnes jsme se ve skole ucili o prirode. Ucitel nam vypravěl o tom,
+`Dnes jsme se ve skole ucili o prirode. Ucitel nam vypravel o tom,
 jak se zmenilo pocasi behem poslednich let. Mluvili jsme take o tom,
 proc je dulezite chranit zvirata i rostliny.`,
 
@@ -152,26 +173,47 @@ let wrong = 0;
 let time = 0;
 let timer = null;
 
-const timeEl = document.getElementById("time");
-const correctEl = document.getElementById("correct");
-const wrongEl = document.getElementById("wrong");
-const wordEl = document.getElementById("word");
+// skóre a série
+let score = 0;
+let streak = 0;
+let bestStreak = 0;
 
-const inputEl = document.getElementById("input");
-const inputBig = document.getElementById("inputBig");
+// kolik úkolů v jednom kole
+let tasksDone = 0;
+let tasksTotal = 0;
 
-const resultEl = document.getElementById("result");
-const menu = document.getElementById("menu");
-const game = document.getElementById("game");
+const timeEl     = document.getElementById("time");
+const correctEl  = document.getElementById("correct");
+const wrongEl    = document.getElementById("wrong");
+const wordEl     = document.getElementById("word");
+
+const inputEl    = document.getElementById("input");
+const inputBig   = document.getElementById("inputBig");
+
+const resultEl   = document.getElementById("result");
+const progressEl = document.getElementById("progress");
+const menu       = document.getElementById("menu");
+const game       = document.getElementById("game");
+const scoreEl    = document.getElementById("score");
+const streakEl   = document.getElementById("streak");
+const bestStreakEl = document.getElementById("bestStreak");
+const accuracyEl = document.getElementById("accuracy");
+const endButtons = document.getElementById("endButtons");
 
 // ------------------------------------------------------
 // Čas
 // ------------------------------------------------------
 function startTimer() {
+    if (timer) return;
     timer = setInterval(() => {
         time += 0.1;
         timeEl.textContent = time.toFixed(1);
     }, 100);
+}
+
+function stopTimer() {
+    clearInterval(timer);
+    timer = null;
 }
 
 // ------------------------------------------------------
@@ -180,39 +222,96 @@ function startTimer() {
 function newWord() {
     if (level === 1) {
         wordEl.textContent = words[Math.floor(Math.random() * words.length)];
-    } 
-    else if (level === 2) {
+    } else if (level === 2) {
         wordEl.textContent = sentences[Math.floor(Math.random() * sentences.length)];
-    } 
-    else {
+    } else {
         wordEl.textContent = paragraphs[Math.floor(Math.random() * paragraphs.length)];
     }
+
+    // automatické focusování inputu
+    if (level === 3) {
+        inputBig.focus();
+    } else {
+        inputEl.focus();
+    }
+}
+
+// ------------------------------------------------------
+// Statistika
+// ------------------------------------------------------
+function updateStats() {
+    scoreEl.textContent = score;
+    streakEl.textContent = streak;
+    bestStreakEl.textContent = bestStreak;
+    correctEl.textContent = correct;
+    wrongEl.textContent = wrong;
+
+    const total = correct + wrong;
+    const acc = total > 0 ? Math.round((correct / total) * 100) : 0;
+    accuracyEl.textContent = acc;
+
+    progressEl.textContent = `Úkol: ${tasksDone}/${tasksTotal}`;
+}
+
+// ------------------------------------------------------
+// Konec kola
+// ------------------------------------------------------
+function endRound() {
+    stopTimer();
+
+    // shrnutí
+    const total = correct + wrong;
+    const acc = total > 0 ? Math.round((correct / total) * 100) : 0;
+    resultEl.innerHTML =
+        `<strong>Konec kola!</strong><br>` +
+        `Čas: ${time.toFixed(1)} s<br>` +
+        `Správně: ${correct}, špatně: ${wrong}<br>` +
+        `Přesnost: ${acc} %<br>` +
+        `Skóre: ${score}, nejlepší série: ${bestStreak}`;
+
+    endButtons.style.display = "block";
 }
 
 // ------------------------------------------------------
 // Kontrola
 // ------------------------------------------------------
 function checkWord() {
-    const target = wordEl.textContent;
-    const typed = (level <= 2 ? inputEl.value.trim() : inputBig.value.trim());
+    const target = wordEl.textContent.trim();
+    const typed  = (level <= 2 ? inputEl.value.trim() : inputBig.value.trim());
+
+    if (!typed) {
+        return; // prázdný vstup nepočítáme
+    }
+
+    tasksDone++;
 
     if (typed === target) {
         correct++;
-        resultEl.textContent = "Spravne!";
+        streak++;
+        if (streak > bestStreak) bestStreak = streak;
+        score += 10 + Math.max(0, 5 - Math.floor(time)); // malý bonus za rychlost na začátku kola
+        resultEl.textContent = "Správně!";
         resultEl.style.color = "green";
     } else {
         wrong++;
-        resultEl.textContent = "Spatne!";
+        streak = 0;
+        score = Math.max(0, score - 5);
+        resultEl.innerHTML =
+            `Špatně.<br><span style="color:#555;">Správně: „${target}“<br>Ty: „${typed}“</span>`;
         resultEl.style.color = "red";
     }
-
-    correctEl.textContent = correct;
-    wrongEl.textContent = wrong;
 
     inputEl.value = "";
     inputBig.value = "";
 
-    newWord();
+    updateStats();
+
+    // konec kola?
+    if (tasksDone >= tasksTotal) {
+        endRound();
+    } else {
+        newWord();
+    }
 }
 
 // ------------------------------------------------------
@@ -222,15 +321,29 @@ function startLevel(lvl) {
     level = lvl;
     menu.style.display = "none";
     game.style.display = "block";
+    endButtons.style.display = "none";
 
     // Reset
     correct = 0;
     wrong = 0;
     time = 0;
+    score = 0;
+    streak = 0;
+    bestStreak = 0;
+    tasksDone = 0;
+
     timeEl.textContent = "0.0";
-    correctEl.textContent = 0;
-    wrongEl.textContent = 0;
     resultEl.textContent = "";
+    resultEl.style.color = "black";
+
+    // Počet úkolů podle levelu
+    if (level === 1) {
+        tasksTotal = 20;
+    } else if (level === 2) {
+        tasksTotal = 12;
+    } else {
+        tasksTotal = 6;
+    }
 
     // Přepnout inputy
     if (level === 3) {
@@ -241,18 +354,36 @@ function startLevel(lvl) {
         inputBig.style.display = "none";
     }
 
+    updateStats();
     newWord();
+    stopTimer();
     startTimer();
 }
 
+// ------------------------------------------------------
+// Restart stejného levelu
+// ------------------------------------------------------
+function restartSameLevel() {
+    startLevel(level);
+}
+
+// Zpět na menu
+function backToMenu() {
+    stopTimer();
+    menu.style.display = "block";
+    game.style.display = "none";
+}
+
+// ------------------------------------------------------
 // Enter u inputu
+// ------------------------------------------------------
 inputEl.addEventListener("keydown", e => {
     if (e.key === "Enter") checkWord();
 });
 
-// Enter u textarea
+// Enter u textarea – Ctrl+Enter pro potvrzení
 inputBig.addEventListener("keydown", e => {
-    if (e.key === "Enter" && e.ctrlKey) {  // Ctrl+Enter pro potvrzení
+    if (e.key === "Enter" && e.ctrlKey) {
         e.preventDefault();
         checkWord();
     }
