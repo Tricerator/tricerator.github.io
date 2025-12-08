@@ -292,14 +292,14 @@ const missSound = document.getElementById("missSound");
 const levelFruitEmojis = ["🍒","🍎","🍇","🍓","🍌","🍍","🍉","🥝"];
 const levelFruitNames  = ["Třešeň","Jablko","Hrozny","Jahoda","Banán","Ananas","Meloun","Kiwi"];
 
-// POWER-UPY (jen v pokročilých režimech)
+// POWER-UPY (jen v pokročilých režimech) – ČASTĚJŠÍ
 const GOLD_EMOJI  = "⭐";
 const HEART_EMOJI = "💗";
 const BOMB_EMOJI  = "💣";
 
-const GOLD_CHANCE  = 0.06; // 6 % všech spawnů
-const HEART_CHANCE = 0.04; // 4 %
-const BOMB_CHANCE  = 0.08; // 8 %
+const GOLD_CHANCE  = 0.12; // 12 % všech spawnů = zlatá hvězda
+const HEART_CHANCE = 0.05; // 5 % = srdce
+const BOMB_CHANCE  = 0.15; // 15 % = bomba
 
 // BOSS (jen v pokročilých)
 const BOSS_LEVEL_PERIOD  = 5;    // každý 5. level
@@ -310,6 +310,7 @@ const BOSS_LIFE_PENALTY  = 3;
 let inBossFight = false;
 let bossHP      = 0;
 let bossTimerId = null;
+let bossIntro   = false; // právě zobrazený bossí úvod
 
 // --- Pomocné funkce -------------------------------------------------------
 function getFruitEmojiForLevel(l) {
@@ -364,7 +365,7 @@ function applyDifficultyForLevel() {
     }
 }
 
-// ---- LEVEL / GAME OVER OVERLAY ----
+// ---- LEVEL / GAME OVER / BOSS INTRO OVERLAY ----
 function showLevelOverlay(levelNumber) {
     const emoji = getFruitEmojiForLevel(levelNumber);
     const name  = getFruitNameForLevel(levelNumber);
@@ -391,6 +392,31 @@ function showLevelOverlay(levelNumber) {
     waitingForLevelStart = true;
     gameOver = false;
     inBossFight = false;
+    bossIntro = false;
+    levelOverlay.classList.add("visible");
+}
+
+function showBossIntro(levelNumber) {
+    // zastavíme běžnou hru, jen info obrazovka
+    gameRunning = false;
+    waitingForLevelStart = false;
+    gameOver = false;
+    inBossFight = false;
+    bossIntro = true;
+
+    stopTimer();
+    stopSpawning();
+    clearAllSquares();
+
+    const emoji = "👑";
+
+    levelText.innerHTML =
+        "BOSS LEVEL " + levelNumber + " " + emoji +
+        "<br><span style='font-size:0.6em;'>Rychle klikej / táhni myší po koruně,</span>" +
+        "<br><span style='font-size:0.6em;'>dokud ji úplně nezničíš.</span>" +
+        "<br><span style='font-size:0.5em;'>Když to nestihneš, přijdeš o " + BOSS_LIFE_PENALTY + " životy.</span>" +
+        "<br><br><span style='font-size:0.5em;'>Klikni / ťukni pro začátek souboje.</span>";
+
     levelOverlay.classList.add("visible");
 }
 
@@ -399,6 +425,7 @@ function showGameOver() {
     waitingForLevelStart = false;
     gameOver = true;
     inBossFight = false;
+    bossIntro = false;
 
     stopTimer();
     stopSpawning();
@@ -441,6 +468,7 @@ function resetGame() {
     lives = maxLives;
 
     inBossFight = false;
+    bossIntro   = false;
     if (bossTimerId) {
         clearTimeout(bossTimerId);
         bossTimerId = null;
@@ -476,7 +504,16 @@ levelOverlay.addEventListener("pointerdown", () => {
         // nová hra ve stejném režimu
         resetGame();
         startLevelIfWaiting();
+    } else if (bossIntro) {
+        // právě jsme na úvodu boss levelu
+        bossIntro = false;
+        levelOverlay.classList.remove("visible");
+
+        gameRunning = true;
+        startTimer();
+        startBossFight();  // tady skutečně spustíme bosse
     } else {
+        // klasický level overlay
         startLevelIfWaiting();
     }
 });
@@ -492,7 +529,7 @@ modeOverlay.querySelectorAll("button").forEach(btn => {
 
 // ---- PAUZA ----
 function togglePause() {
-    if (waitingForLevelStart || gameOver || !gameMode) return; // v overlay pauzu neřešíme
+    if (waitingForLevelStart || gameOver || !gameMode || bossIntro) return; // v overlay pauzu neřešíme
 
     if (gameRunning) {
         gameRunning = false;
@@ -674,7 +711,8 @@ function checkLevelUp() {
         applyDifficultyForLevel();
 
         if (isBossLevel(level)) {
-            startBossFight();
+            // místo okamžitého boje nejdřív info obrazovka
+            showBossIntro(level);
         } else {
             showLevelOverlay(level);
         }
@@ -720,6 +758,41 @@ function startFruitMovement(square) {
     }
 
     requestAnimationFrame(step);
+}
+
+// ---- MALÝ „POPUP“ TEXT (vylepšení navíc) ----
+function showFloatingText(text, x, y, color) {
+    const el = document.createElement("div");
+    el.textContent = text;
+    el.style.position = "absolute";
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    el.style.transform = "translate(-50%, 0)";
+    el.style.fontSize = "18px";
+    el.style.fontWeight = "bold";
+    el.style.color = color || "#ffffff";
+    el.style.textShadow = "0 0 4px rgba(0,0,0,0.8)";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = 9999;
+    el.style.opacity = "1";
+
+    gameArea.appendChild(el);
+
+    let opacity = 1;
+    let dy = 0;
+
+    function animate() {
+        opacity -= 0.03;
+        dy -= 0.7;
+        el.style.opacity = opacity.toString();
+        el.style.transform = "translate(-50%, " + dy + "px)";
+        if (opacity <= 0) {
+            el.remove();
+        } else {
+            requestAnimationFrame(animate);
+        }
+    }
+    requestAnimationFrame(animate);
 }
 
 // ---- GENEROVÁNÍ OVOCE ----
@@ -774,11 +847,20 @@ function spawnSquare() {
         hitRegistered = true;
 
         const kind = square.dataset.kind || "normal";
+
+        // souřadnice pro popup text (před remove)
+        const rect = square.getBoundingClientRect();
+        const gaRect = gameArea.getBoundingClientRect();
+        const fx = rect.left - gaRect.left + rect.width / 2;
+        const fy = rect.top - gaRect.top;
+
         square.remove();
 
         if (kind === "bomb" && isAdvancedMode()) {
             combo = 0;
             updateComboDisplay();
+
+            showFloatingText("-2 životy", fx, fy, "#ff4444");
 
             if (lives > 0) {
                 lives = Math.max(0, lives - 2);
@@ -791,16 +873,19 @@ function spawnSquare() {
             return;
         }
 
+        // normální zásah (včetně gold/heart)
         registerHit();
 
         if (isAdvancedMode()) {
             if (kind === "gold") {
                 score += 150;
                 scoreEl.textContent = score;
+                showFloatingText("+150", fx, fy, "#ffd700");
             } else if (kind === "heart") {
                 if (lives < maxLives) {
                     lives++;
                     livesEl.textContent = lives;
+                    showFloatingText("+1 život", fx, fy, "#66ff66");
                 }
             }
         }
