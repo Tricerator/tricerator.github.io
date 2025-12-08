@@ -190,6 +190,8 @@
     | ⚡ Combo: <span id="combo">0</span> (max: <span id="bestCombo">0</span>)
     | 🏆 Rekord: <span id="highscore">0</span>
     | 🎮 Režim: <span id="modeLabel">-</span>
+    | <span id="changeModeBtn" style="cursor:pointer; text-decoration:underline;">🔁 Změnit obtížnost</span>
+
     <br>
     P = pauza (PC), dvojťuk/dvouprstý tap = pauza (mobil)
 </div>
@@ -289,6 +291,8 @@ const levelOverlay = document.getElementById("levelOverlay");
 const levelText    = document.getElementById("levelText");
 
 const modeOverlay  = document.getElementById("modeOverlay");
+const changeModeBtn = document.getElementById("changeModeBtn");
+
 
 const hitSound  = document.getElementById("hitSound");
 const missSound = document.getElementById("missSound");
@@ -363,6 +367,41 @@ function updateHighscoreIfNeeded() {
         }
     }
 }
+
+    function openModeMenu() {
+    // úplně zastavit hru
+    gameRunning = false;
+    waitingForLevelStart = false;
+    gameOver = false;
+    inBossFight = false;
+    bossIntro = false;
+
+    stopTimer();
+    stopSpawning();
+    clearAllSquares();
+
+    // zrušíme případný boss timeout
+    if (bossTimerId) {
+        clearTimeout(bossTimerId);
+        bossTimerId = null;
+    }
+
+    // reset základních hodnot na HUDu (aby to nevypadalo „zamrzle“)
+    timeEl.textContent      = "0.0";
+    hitEl.textContent       = "0";
+    totalEl.textContent     = "0";
+    levelEl.textContent     = "1";
+    scoreEl.textContent     = "0";
+    comboEl.textContent     = "0";
+    bestComboEl.textContent = "0";
+    livesEl.textContent     = maxLives.toString();
+
+    // zapneme hlavní menu
+    modeOverlay.classList.remove("hidden");
+    modeLabelEl.textContent = "-";
+    gameMode = null;
+}
+
 
 // ---- ČASOMÍRA ----
 function startTimer() {
@@ -564,6 +603,10 @@ modeOverlay.querySelectorAll("button").forEach(btn => {
         modeOverlay.classList.add("hidden");
         resetGame();
     });
+});
+
+changeModeBtn.addEventListener("click", () => {
+    openModeMenu();
 });
 
 // ---- PAUZA ----
