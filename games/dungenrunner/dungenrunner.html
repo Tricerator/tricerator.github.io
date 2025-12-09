@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Dungeon Runner – školní verze</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(circle at top, #222 0, #050608 60%);
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-top: 20px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    #menu, #game {
+      max-width: 900px;
+      width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #menu {
+      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 4px;
+      font-weight: 600;
+    }
+
+    select, button {
+      font-size: 16px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: none;
+      margin-bottom: 10px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button#startGame {
+      margin-top: 10px;
+      background: #4caf50;
+      color: white;
+    }
+
+    button#startGame:hover {
+      filter: brightness(1.1);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    #hud span {
+      white-space: nowrap;
+    }
+
+    #controls {
+      font-size: 14px;
+      margin-bottom: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(10, 40px);
+      grid-template-rows: repeat(10, 40px);
+      gap: 3px;
+      margin-top: 10px;
+      background: #111;
+      padding: 6px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    }
+
+    .tile {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: #1c1c1c;
+      font-size: 22px;
+      user-select: none;
+    }
+
+    .tile.player {
+      background: #264653;
+    }
+
+    .tile.monster {
+      background: #8d2b2b;
+    }
+
+    .tile.chest {
+      background: #8c6b2f;
+    }
+
+    .tile.exit {
+      background: #205c20;
+    }
+
+    .tile.empty {
+      background: #181818;
+      color: #444;
+      font-size: 14px;
+    }
+
+    #log {
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 13px;
+      background: rgba(0,0,0,0.7);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    #log p {
+      margin: 2px 0;
+    }
+
+    #gameOverOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: white;
+      z-index: 10;
+    }
+
+    #gameOverOverlay button {
+      margin-top: 15px;
+      background: #4caf50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dungeon Runner – školní verze</h1>
+
+  <!-- MENU: volba rasy a povolání -->
+  <section id="menu">
+    <p>Jednoduchý dungeon, kde si žáci procvičí ovládání klávesnice (WASD, šipky, mezerník, čísla).</p>
+
+    <label for="raceSelect">Rasa</label>
+    <select id="raceSelect">
+      <option value="human">Člověk (+0 HP, +0 útok)</option>
+      <option value="elf">Elf (+0 HP, +2 útok)</option>
+      <option value="orc">Ork (+5 HP, +0 útok)</option>
+    </select>
+
+    <label for="classSelect">Povolání</label>
+    <select id="classSelect">
+      <option value="warrior">Válečník (30 HP, 6 útok, 2 obrana)</option>
+      <option value="mage">Mág (20 HP, 8 útok, 0 obrana)</option>
+      <option value="rogue">Zloděj (24 HP, 5 útok, 1 obrana)</option>
+    </select>
+
+    <button id="startGame">Start hry</button>
+  </section>
+
+  <!-- HRA -->
+  <section id="game" class="hidden">
+    <div id="hud">
+      <span id="hudClassRace"></span>
+      <span id="hudHp"></span>
+      <span id="hudAttack"></span>
+      <span id="hudWeapon"></span>
+      <span id="hudKeys"></span>
+    </div>
+
+    <div id="controls">
+      <strong>Ovládání:</strong>
+      Pohyb: WASD nebo šipky | Útok: mezerník (na sousední monstrum) | Ability: klávesa 1 (malé léčení).  
+      Cíl: přežij, zabij monstra nebo doběhni k východu 🚪.
+    </div>
+
+    <div id="grid"></div>
+    <div id="log"></div>
+  </section>
+
+  <!-- Game over / vítězství overlay -->
+  <div id="gameOverOverlay">
+    <h2 id="gameOverText"></h2>
+    <button id="restartBtn">Hrát znovu</button>
+  </div>
+
+  <script>
+    // ==== Herní stav ====
+    const mapWidth = 10;
+    const mapHeight = 10;
+
+    const player = {
+      x: 0,
+      y: 9,
+      maxHp: 1,
+      hp: 1,
+      baseAttack: 1,
+      defense: 0,
+      weaponBonus: 0,
+      className: "",
+      raceName: ""
+    };
+
+    let monsters = [];
+    let chests = [];
+    const exit = { x: 9, y: 0 }; // východ
+    let keyPressCount = 0;
+    let gameRunning = false;
+
+    const hudClassRace = document.getElementById('hudClassRace');
+    const hudHp = document.getElementById('hudHp');
+    const hudAttack = document.getElementById('hudAttack');
+    const hudWeapon = document.getElementById('hudWeapon');
+    const hudKeys = document.getElementById('hudKeys');
+    const gridEl = document.getElementById('grid');
+    const logEl = document.getElementById('log');
+    const menuEl = document.getElementById('menu');
+    const gameEl = document.getElementById('game');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const gameOverText = document.getElementById('gameOverText');
+
+    // ==== Pomocné funkce ====
+    function log(msg) {
+      const p = document.createElement('p');
+      p.textContent = msg;
+      logEl.appendChild(p);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateHud() {
+      hudClassRace.textContent = `Postava: ${player.raceName} ${player.className}`;
+      hudHp.textContent = `Životy: ${player.hp}/${player.maxHp}`;
+      const totalAttack = player.baseAttack + player.weaponBonus;
+      hudAttack.textContent = `Útok: ${totalAttack} (zákl. ${player.baseAttack}, zbraň +${player.weaponBonus})`;
+      hudWeapon.textContent = player.weaponBonus > 0 ? `Zbraň: vylepšená` : `Zbraň: základní`;
+      hudKeys.textContent = `Stisknuté klávesy: ${keyPressCount}`;
+    }
+
+    function isSamePos(a, b) {
+      return a.x === b.x && a.y === b.y;
+    }
+
+    function getMonsterAt(x, y) {
+      return monsters.find(m => m.hp > 0 && m.x === x && m.y === y);
+    }
+
+    function getChestAt(x, y) {
+      return chests.find(c => !c.opened && c.x === x && c.y === y);
+    }
+
+    function randomFreePositions(count, forbiddenPositions) {
+      const all = [];
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const forbidden = forbiddenPositions.some(p => p.x === x && p.y === y);
+          if (!forbidden) {
+            all.push({ x, y });
+          }
+        }
+      }
+      // zamíchat
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
+      return all.slice(0, count);
+    }
+
+    function initDungeon() {
+      monsters = [];
+      chests = [];
+      // Player start
+      player.x = 0;
+      player.y = 9;
+
+      const forbidden = [{ x: player.x, y: player.y }, exit];
+
+      // 4–6 monster
+      const monsterCount = 4 + Math.floor(Math.random() * 3);
+      const chestCount = 2;
+
+      const positions = randomFreePositions(monsterCount + chestCount, forbidden);
+      const monsterPositions = positions.slice(0, monsterCount);
+      const chestPositions = positions.slice(monsterCount);
+
+      monsterPositions.forEach((pos, i) => {
+        monsters.push({
+          x: pos.x,
+          y: pos.y,
+          hp: 10,
+          attack: 3,
+          name: `Sliz ${i + 1}`
+        });
+      });
+
+      chestPositions.forEach((pos, i) => {
+        chests.push({
+          x: pos.x,
+          y: pos.y,
+          opened: false,
+          bonus: 2 + i // +2, +3
+        });
+      });
+
+      logEl.innerHTML = "";
+      log("Vstoupil jsi do dungeon runneru. Najdi východ nebo zabij monstra!");
+    }
+
+    function renderGrid() {
+      gridEl.innerHTML = "";
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const tile = document.createElement('div');
+          tile.classList.add('tile');
+
+          let char = '';
+          let extraClass = 'empty';
+
+          if (player.x === x && player.y === y) {
+            char = '🧙'; // postava
+            extraClass = 'player';
+          } else {
+            const m = getMonsterAt(x, y);
+            const c = getChestAt(x, y);
+
+            if (m) {
+              char = '👾';
+              extraClass = 'monster';
+            } else if (c) {
+              char = '💰';
+              extraClass = 'chest';
+            } else if (exit.x === x && exit.y === y) {
+              char = '🚪';
+              extraClass = 'exit';
+            } else {
+              char = '.';
+              extraClass = 'empty';
+            }
+          }
+
+          tile.textContent = char;
+          tile.classList.add(extraClass);
+          gridEl.appendChild(tile);
+        }
+      }
+    }
+
+    function checkGameEnd() {
+      // vyhrál: všichni mrtví nebo na východu
+      const aliveMonsters = monsters.some(m => m.hp > 0);
+      if (!aliveMonsters) {
+        endGame("Zvítězil jsi! Všechna monstra jsou mrtvá.");
+        return true;
+      }
+      if (isSamePos(player, exit)) {
+        endGame("Doběhl jsi k východu. Gratuluji!");
+        return true;
+      }
+      return false;
+    }
+
+    function endGame(text) {
+      gameRunning = false;
+      gameOverText.textContent = text;
+      gameOverOverlay.style.display = 'flex';
+    }
+
+    // ==== Ovládání ====
+    function tryMove(dx, dy) {
+      if (!gameRunning) return;
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+
+      // mimo mapu
+      if (newX < 0 || newX >= mapWidth || newY < 0 || newY >= mapHeight) {
+        log("Narazil jsi do zdi dungeonu.");
+        return;
+      }
+
+      const monster = getMonsterAt(newX, newY);
+      if (monster) {
+        // místo pohybu – útok na monstrum
+        attackMonster(monster);
+        return;
+      }
+
+      player.x = newX;
+      player.y = newY;
+      log(`Posunul ses na (${player.x + 1}, ${player.y + 1}).`);
+
+      const chest = getChestAt(player.x, player.y);
+      if (chest) {
+        chest.opened = true;
+        player.weaponBonus += chest.bonus;
+        log(`Našel jsi truhlu! Zbraň posílena o +${chest.bonus} útoku.`);
+      }
+
+      updateHud();
+      renderGrid();
+      checkGameEnd();
+      monstersAct();
+    }
+
+    function attackMonster(monster) {
+      const totalAttack = player.baseAttack + player.weaponBonus;
+      log(`Útočíš na ${monster.name} a dáváš ${totalAttack} poškození.`);
+      monster.hp -= totalAttack;
+
+      if (monster.hp <= 0) {
+        log(`${monster.name} byl poražen!`);
+      } else {
+        log(`${monster.name} má ještě ${monster.hp} HP.`);
+      }
+
+      monstersAct();
+      updateHud();
+      renderGrid();
+      checkGameEnd();
+    }
+
+    function monstersAct() {
+      if (!gameRunning) return;
+      monsters.forEach(m => {
+        if (m.hp <= 0) return;
+
+        const dx = player.x - m.x;
+        const dy = player.y - m.y;
+        const distance = Math.abs(dx) + Math.abs(dy);
+
+        if (distance === 1) {
+          // útok
+          const dmg = Math.max(0, m.attack - player.defense);
+          player.hp -= dmg;
+          log(`${m.name} tě zasáhl za ${dmg} poškození!`);
+          if (player.hp <= 0) {
+            player.hp = 0;
+            updateHud();
+            endGame("Zemřel jsi v dungeonu. :(");
+          }
+        } else {
+          // jednoduchý AI – snaha přiblížit se
+          let stepX = 0, stepY = 0;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            stepX = dx > 0 ? 1 : -1;
+          } else if (dy !== 0) {
+            stepY = dy > 0 ? 1 : -1;
+          }
+
+          const newX = m.x + stepX;
+          const newY = m.y + stepY;
+          // kontrola kolize s jiným monstrem
+          const occupied = monsters.some(other => other !== m && other.hp > 0 &&
+            other.x === newX && other.y === newY);
+          if (!occupied &&
+              newX >= 0 && newX < mapWidth &&
+              newY >= 0 && newY < mapHeight &&
+              !(player.x === newX && player.y === newY)) {
+            m.x = newX;
+            m.y = newY;
+          }
+        }
+      });
+      updateHud();
+      renderGrid();
+    }
+
+    // Ability: klávesa 1 – malé léčení
+    function useAbility1() {
+      if (!gameRunning) return;
+      const heal = 4;
+      if (player.hp >= player.maxHp) {
+        log("Tvá ability 1: Už máš plné životy.");
+        return;
+      }
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      log(`Ability 1: Léčíš se o ${heal} HP.`);
+      updateHud();
+    }
+
+    // ==== Obsluha kláves ====
+    window.addEventListener('keydown', (e) => {
+      if (!gameRunning) return;
+
+      keyPressCount++;
+      e.preventDefault(); // potlačí scroll šipek
+
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          tryMove(0, -1);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          tryMove(0, 1);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          tryMove(-1, 0);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          tryMove(1, 0);
+          break;
+        case ' ':
+          // mezerník – útok na monstrum v sousedství (nahoře/dole/vlevo/vpravo)
+          const neighbors = [
+            { x: player.x + 1, y: player.y },
+            { x: player.x - 1, y: player.y },
+            { x: player.x, y: player.y + 1 },
+            { x: player.x, y: player.y - 1 }
+          ];
+          const target = neighbors
+            .map(pos => getMonsterAt(pos.x, pos.y))
+            .find(m => m);
+          if (target) {
+            attackMonster(target);
+          } else {
+            log("Žádné monstrum v dosahu útoku.");
+          }
+          break;
+        case '1':
+          useAbility1();
+          break;
+      }
+      updateHud();
+    });
+
+    // ==== Start hry ====
+    document.getElementById('startGame').addEventListener('click', () => {
+      const raceValue = document.getElementById('raceSelect').value;
+      const classValue = document.getElementById('classSelect').value;
+
+      // nastavení základních statů podle classy
+      if (classValue === 'warrior') {
+        player.maxHp = 30;
+        player.baseAttack = 6;
+        player.defense = 2;
+        player.className = 'Válečník';
+      } else if (classValue === 'mage') {
+        player.maxHp = 20;
+        player.baseAttack = 8;
+        player.defense = 0;
+        player.className = 'Mág';
+      } else if (classValue === 'rogue') {
+        player.maxHp = 24;
+        player.baseAttack = 5;
+        player.defense = 1;
+        player.className = 'Zloděj';
+      }
+
+      // rasa
+      if (raceValue === 'human') {
+        player.raceName = 'Člověk';
+        // žádný bonus
+      } else if (raceValue === 'elf') {
+        player.raceName = 'Elf';
+        player.baseAttack += 2;
+      } else if (raceValue === 'orc') {
+        player.raceName = 'Ork';
+        player.maxHp += 5;
+      }
+
+      player.hp = player.maxHp;
+      player.weaponBonus = 0;
+
+      keyPressCount = 0;
+      initDungeon();
+      updateHud();
+      renderGrid();
+
+      menuEl.classList.add('hidden');
+      gameEl.classList.remove('hidden');
+      gameRunning = true;
+      gameOverOverlay.style.display = 'none';
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      // návrat do menu – žák si může znovu vybrat rasu a classu
+      gameOverOverlay.style.display = 'none';
+      gameEl.classList.add('hidden');
+      menuEl.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
