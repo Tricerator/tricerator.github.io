@@ -207,6 +207,7 @@
       <option value="human">Člověk (+0 HP, +0 útok)</option>
       <option value="elf">Elf (+0 HP, +2 útok, šípy)</option>
       <option value="orc">Ork (+5 HP, +0 útok)</option>
+      <option value="dwarf">Trpaslík (+8 HP, +1 obrana)</option>
     </select>
 
     <label for="classSelect">Povolání</label>
@@ -286,7 +287,8 @@
       maxMana: 0,
       mana: 0,
       arrows: 0,
-      facing: { dx: 1, dy: 0 }
+      facing: { dx: 1, dy: 0 },
+      symbol: '🧙'
     };
 
     let monsters = [];
@@ -297,6 +299,10 @@
     let gameRunning = false;
     let level = 1;
     let gold = 0;
+
+    // vizuální projektil
+    let projectilePath = [];
+    let projectileType = null; // "spell" nebo "arrow"
 
     const hudLevel   = document.getElementById('hudLevel');
     const hudClassRace = document.getElementById('hudClassRace');
@@ -404,19 +410,42 @@
       return all.slice(0, count);
     }
 
+    // garantovaná chodba od startu ke dveřím (aby hráč nebyl zazděný)
+    function buildPath(start, end) {
+      const path = [];
+      let x = start.x;
+      let y = start.y;
+      while (x !== end.x) {
+        x += end.x > x ? 1 : -1;
+        path.push({ x, y });
+      }
+      while (y !== end.y) {
+        y += end.y > y ? -1 : 1; // z 9 nahoru k 0
+        path.push({ x, y });
+      }
+      return path;
+    }
+
     function initDungeon() {
       monsters = [];
       chests = [];
       walls = [];
+      projectilePath = [];
+      projectileType = null;
+
       // Player start
       player.x = 0;
       player.y = 9;
 
       const baseForbidden = [{ x: player.x, y: player.y }, exit];
 
-      // zdi – počet roste s levelem
+      // vytvoř chodbu, kde nesmí být zdi
+      const corridor = buildPath({ x: player.x, y: player.y }, exit);
+      const forbiddenForWalls = baseForbidden.concat(corridor);
+
+      // zdi – počet roste s levelem, ale ne na chodbě
       const wallCount = Math.min(20, 6 + level * 2);
-      const wallPositions = randomFreePositions(wallCount, baseForbidden);
+      const wallPositions = randomFreePositions(wallCount, forbiddenForWalls);
       walls = wallPositions;
 
       const forbidden = baseForbidden.concat(walls);
@@ -432,8 +461,8 @@
       monsterPositions.forEach((pos, i) => {
         const type = MONSTER_TYPES[Math.floor(Math.random() * MONSTER_TYPES.length)];
         // inflace nepřátel s levelem
-        const extraHp = (level - 1) * 5;                      // HP roste docela rychle
-        const extraAtk = Math.floor((level - 1) / 1.5) + 1;   // útok roste pomaleji
+        const extraHp = (level - 1) * 5;                      // HP roste rychle
+        const extraAtk = Math.floor((level - 1) / 1.5) + 1;   // útok pomaleji
         monsters.push({
           x: pos.x,
           y: pos.y,
@@ -458,6 +487,19 @@
       log(`Vstoupil jsi do dungeon runneru – level ${level}. Zabij všechna monstra a pak dojdi ke dveřím.`);
     }
 
+    // ikona hráče podle rasy
+    function updatePlayerSymbol() {
+      if (player.raceName === 'Elf') {
+        player.symbol = '🧝';
+      } else if (player.raceName === 'Ork') {
+        player.symbol = '🧌';
+      } else if (player.raceName === 'Trpaslík') {
+        player.symbol = '🧔';
+      } else { // Člověk
+        player.symbol = '🧑';
+      }
+    }
+
     function renderGrid() {
       gridEl.innerHTML = "";
       for (let y = 0; y < mapHeight; y++) {
@@ -469,7 +511,7 @@
           let extraClass = 'empty';
 
           if (player.x === x && player.y === y) {
-            char = '🧙';
+            char = player.symbol;
             extraClass = 'player';
           } else if (isWall(x, y)) {
             char = '🧱';
@@ -493,6 +535,12 @@
             }
           }
 
+          // vizuální projektil – přepíše char (kromě políčka s hráčem)
+          if (!(player.x === x && player.y === y) &&
+              projectilePath.some(p => p.x === x && p.y === y)) {
+            char = projectileType === 'spell' ? '✧' : '➤';
+          }
+
           tile.textContent = char;
           tile.classList.add(extraClass);
           gridEl.appendChild(tile);
@@ -504,6 +552,65 @@
       gameRunning = false;
       gameOverText.textContent = text;
       gameOverOverlay.style.display = 'flex';
+    }
+
+    // ==== pathfinding pro monstra (BFS) ====
+    function findNextStepTowards(start, goal) {
+      if (start.x === goal.x && start.y === goal.y) return null;
+
+      const dirs = [
+        { dx: 1, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 0, dy: -1 }
+      ];
+
+      const visited = Array.from({ length: mapHeight }, () =>
+        Array(mapWidth).fill(false)
+      );
+
+      const queue = [];
+      queue.push({ x: start.x, y: start.y, prev: null });
+      visited[start.y][start.x] = true;
+
+      const parents = {};
+
+      function key(x, y) { return x + "," + y; }
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        if (current.x === goal.x && current.y === goal.y) {
+          // zpětné zrekonstruování cesty – stačí první krok
+          let k = key(current.x, current.y);
+          let prev = parents[k];
+          let child = { x: current.x, y: current.y };
+          while (prev && !(prev.x === start.x && prev.y === start.y)) {
+            child = prev;
+            k = key(prev.x, prev.y);
+            prev = parents[k];
+          }
+          return child;
+        }
+
+        for (const d of dirs) {
+          const nx = current.x + d.dx;
+          const ny = current.y + d.dy;
+          if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) continue;
+          if (visited[ny][nx]) continue;
+          if (isWall(nx, ny)) continue;
+          // ostatní monstra jsou překážka, kromě startu
+          const occupied = monsters.some(m => m.hp > 0 &&
+            !(m.x === start.x && m.y === start.y) &&
+            m.x === nx && m.y === ny);
+          if (occupied) continue;
+
+          visited[ny][nx] = true;
+          parents[key(nx, ny)] = { x: current.x, y: current.y };
+          queue.push({ x: nx, y: ny, prev: current });
+        }
+      }
+
+      return null; // cesta není
     }
 
     // ==== Pohyb a melee útok ====
@@ -609,26 +716,16 @@
             endGame("Zemřel jsi v dungeonu. :(");
           }
         } else {
-          // jednoduché AI – snaha přiblížit se, respektuje zdi i ostatní monstra
-          let stepX = 0, stepY = 0;
-          if (Math.abs(dx) > Math.abs(dy)) {
-            stepX = dx > 0 ? 1 : -1;
-          } else if (dy !== 0) {
-            stepY = dy > 0 ? 1 : -1;
-          }
-
-          const newX = m.x + stepX;
-          const newY = m.y + stepY;
-          const occupied = monsters.some(other => other !== m && other.hp > 0 &&
-            other.x === newX && other.y === newY);
-
-          if (!occupied &&
-              newX >= 0 && newX < mapWidth &&
-              newY >= 0 && newY < mapHeight &&
-              !isWall(newX, newY) &&
-              !(player.x === newX && player.y === newY)) {
-            m.x = newX;
-            m.y = newY;
+          // AI s obcházením zdí (BFS)
+          const nextStep = findNextStepTowards({ x: m.x, y: m.y }, { x: player.x, y: player.y });
+          if (nextStep) {
+            // nesmí vlézt na hráče – to řeší útok v dalším kole, pokud bude vedle
+            const occupied = monsters.some(other => other !== m && other.hp > 0 &&
+              other.x === nextStep.x && other.y === nextStep.y);
+            if (!occupied && !(player.x === nextStep.x && player.y === nextStep.y)) {
+              m.x = nextStep.x;
+              m.y = nextStep.y;
+            }
           }
         }
       });
@@ -649,12 +746,12 @@
       updateHud();
     }
 
-    // Útok na dálku – klávesa 2
+    // Útok na dálku – klávesa 2 (s vizuální stopou)
     function useRangedAttack() {
       if (!gameRunning) return;
 
       let dmg;
-      let usedResource = false;
+      let type = null;
 
       if (player.className === 'Mág') {
         const cost = 3;
@@ -664,7 +761,7 @@
         }
         player.mana -= cost;
         dmg = player.baseAttack + player.weaponBonus + 4;
-        usedResource = true;
+        type = 'spell';
         log("Sesíláš kouzlo na dálku.");
       } else if (player.raceName === 'Elf') {
         const cost = 1;
@@ -674,7 +771,7 @@
         }
         player.arrows -= cost;
         dmg = player.baseAttack + player.weaponBonus + 3;
-        usedResource = true;
+        type = 'arrow';
         log("Vystřelil jsi šíp.");
       } else {
         log("Tvoje postava nemá útok na dálku.");
@@ -685,42 +782,58 @@
       const dy = player.facing.dy;
       if (dx === 0 && dy === 0) {
         log("Nejsi otočený žádným směrem. Nejdřív se pohní.");
-        if (usedResource) updateHud();
+        updateHud();
         return;
       }
 
       let x = player.x + dx;
       let y = player.y + dy;
-      let hit = false;
+      let pathCells = [];
+      let hitMonster = null;
 
-      // range do 4 polí, zastaví se na zdi
       for (let r = 1; r <= 4; r++) {
         if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) break;
         if (isWall(x, y)) break;
 
+        pathCells.push({ x, y });
         const m = getMonsterAt(x, y);
-        if (m) {
-          log(`Útok na dálku zasahuje ${m.name} za ${dmg} poškození.`);
-          m.hp -= dmg;
-          if (m.hp <= 0) {
-            rewardGoldForKill(m.name);
-          } else {
-            log(`${m.name} má ještě ${m.hp} HP.`);
-          }
-          hit = true;
+        if (m && !hitMonster) {
+          hitMonster = m;
           break;
         }
         x += dx;
         y += dy;
       }
 
-      if (!hit) {
-        log("Útok na dálku nic netrefil.");
-      }
-
+      projectilePath = pathCells;
+      projectileType = type;
       updateHud();
       renderGrid();
-      monstersAct();
+
+      gameRunning = false; // krátká pauza na animaci
+
+      setTimeout(() => {
+        if (hitMonster) {
+          log(`Útok na dálku zasahuje ${hitMonster.name} za ${dmg} poškození.`);
+          hitMonster.hp -= dmg;
+          if (hitMonster.hp <= 0) {
+            rewardGoldForKill(hitMonster.name);
+          } else {
+            log(`${hitMonster.name} má ještě ${hitMonster.hp} HP.`);
+          }
+        } else {
+          log("Útok na dálku nic netrefil.");
+        }
+
+        projectilePath = [];
+        projectileType = null;
+        updateHud();
+        renderGrid();
+
+        // teď hraje kolo monstrum
+        gameRunning = true;
+        monstersAct();
+      }, 180);
     }
 
     // ==== Obchod ====
@@ -791,7 +904,7 @@
         player.mana = player.maxMana;   // doplnění many
       }
       if (player.raceName === 'Elf') {
-        player.arrows += 3;             // trochu nových šípů
+        player.arrows += 3;             // nové šípy
       }
       shopOverlay.style.display = 'none';
       startLevel();
@@ -896,6 +1009,7 @@
       // rasa
       if (raceValue === 'human') {
         player.raceName = 'Člověk';
+        player.arrows = 0;
       } else if (raceValue === 'elf') {
         player.raceName = 'Elf';
         player.baseAttack += 2;
@@ -904,11 +1018,17 @@
         player.raceName = 'Ork';
         player.maxHp += 5;
         player.arrows = 0;
+      } else if (raceValue === 'dwarf') {
+        player.raceName = 'Trpaslík';
+        player.maxHp += 8;
+        player.defense += 1;
+        player.arrows = 0;
       }
 
       player.hp = player.maxHp;
       player.weaponBonus = 0;
       player.facing = { dx: 1, dy: 0 }; // výchozí směr doprava
+      updatePlayerSymbol();
 
       level = 1;
       gold = 0;
