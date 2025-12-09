@@ -420,7 +420,7 @@
         path.push({ x, y });
       }
       while (y !== end.y) {
-        y += end.y > y ? -1 : 1; // z 9 nahoru k 0
+        y += end.y > y ? 1 : -1; // pokud je end.y menší, jdeme nahoru (−1)
         path.push({ x, y });
       }
       return path;
@@ -810,7 +810,7 @@
       updateHud();
       renderGrid();
 
-      gameRunning = false; // krátká pauza na animaci
+      gameRunning = false; // krátká pauza na "animaci"
 
       setTimeout(() => {
         if (hitMonster) {
@@ -942,7 +942,13 @@
         case 'D':
           tryMove(1, 0);
           break;
-        case ' ':
+        case '1':
+          useAbility1();
+          break;
+        case '2':
+          useRangedAttack();
+          break;
+        case ' ': {
           // mezerník – útok na monstrum v sousedství (nahoře/dole/vlevo/vpravo)
           const neighbors = [
             { x: player.x + 1, y: player.y },
@@ -959,12 +965,7 @@
             log("Žádné monstrum v dosahu útoku.");
           }
           break;
-        case '1':
-          useAbility1();
-          break;
-        case '2':
-          useRangedAttack();
-          break;
+        }
       }
       updateHud();
     });
