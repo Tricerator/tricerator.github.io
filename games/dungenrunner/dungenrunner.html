@@ -402,3 +402,736 @@
       inventoryListEl.innerHTML = "";
       player.items.forEach(item => {
         const li = document.createElement('li');
+        li.textContent = item;
+        inventoryListEl.appendChild(li);
+      });
+    }
+
+    function addItem(desc) {
+      player.items.push(desc);
+      updateInventory();
+    }
+
+    function updateHud() {
+      hudLevel.textContent = `Level: ${level}`;
+      hudClassRace.textContent = `Postava: ${player.raceName} – ${player.archetype}`;
+      hudHp.textContent = `Životy: ${player.hp}/${player.maxHp}`;
+      const totalAttack = player.baseAttack + player.weaponBonus;
+      hudAttack.textContent = `Útok: ${totalAttack} (zákl. ${player.baseAttack}, zbraň +${player.weaponBonus})`;
+      hudWeapon.textContent = player.weaponBonus > 0 ? `Zbraň: vylepšená` : `Zbraň: základní`;
+      hudGold.textContent = `Zlato: ${gold}`;
+
+      let resText = '';
+      if (player.archetype === 'Mág') {
+        resText = `Mana: ${player.mana}/${player.maxMana}`;
+      } else if (player.archetype === 'Lučištník') {
+        resText = `Šípy: ${player.arrows}`;
+      }
+      hudResource.textContent = resText;
+
+      hudKeys.textContent = `Stisknuté klávesy: ${keyPressCount}`;
+    }
+
+    function isSamePos(a, b) {
+      return a.x === b.x && a.y === b.y;
+    }
+
+    function isWall(x, y) {
+      return walls.some(w => w.x === x && w.y === y);
+    }
+
+    function getMonsterAt(x, y) {
+      return monsters.find(m => m.hp > 0 && m.x === x && m.y === y);
+    }
+
+    function getChestAt(x, y) {
+      return chests.find(c => !c.opened && c.x === x && c.y === y);
+    }
+
+    function randomFreePositions(count, forbiddenPositions) {
+      const all = [];
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const forbidden = forbiddenPositions.some(p => p.x === x && p.y === y);
+          if (!forbidden) {
+            all.push({ x, y });
+          }
+        }
+      }
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
+      return all.slice(0, count);
+    }
+
+    // chodba od startu ke dveřím, aby hráč nebyl zazděný
+    function buildPath(start, end) {
+      const path = [];
+      let x = start.x;
+      let y = start.y;
+      while (x !== end.x) {
+        x += end.x > x ? 1 : -1;
+        path.push({ x, y });
+      }
+      while (y !== end.y) {
+        y += end.y > y ? 1 : -1;
+        path.push({ x, y });
+      }
+      return path;
+    }
+
+    function initDungeon() {
+      monsters = [];
+      chests = [];
+      walls = [];
+      projectilePath = [];
+      projectileType = null;
+
+      player.x = 0;
+      player.y = 9;
+
+      const baseForbidden = [{ x: player.x, y: player.y }, exit];
+
+      const corridor = buildPath({ x: player.x, y: player.y }, exit);
+      const forbiddenForWalls = baseForbidden.concat(corridor);
+
+      const wallCount = Math.min(20, 6 + level * 2);
+      const wallPositions = randomFreePositions(wallCount, forbiddenForWalls);
+      walls = wallPositions;
+
+      const forbidden = baseForbidden.concat(walls);
+
+      const monsterCount = Math.min(12, 3 + level * 2);
+      const chestCount   = 2 + Math.floor(level / 2);
+
+      const positions = randomFreePositions(monsterCount + chestCount, forbidden);
+      const monsterPositions = positions.slice(0, monsterCount);
+      const chestPositions   = positions.slice(monsterCount);
+
+      monsterPositions.forEach((pos, i) => {
+        const type = MONSTER_TYPES[Math.floor(Math.random() * MONSTER_TYPES.length)];
+        const extraHp = (level - 1) * 5;
+        const extraAtk = Math.floor((level - 1) / 1.5) + 1;
+        monsters.push({
+          x: pos.x,
+          y: pos.y,
+          hp: type.hp + Math.max(0, extraHp),
+          attack: type.attack + Math.max(0, extraAtk),
+          name: `${type.name} ${i + 1}`,
+          symbol: type.symbol
+        });
+      });
+
+      chestPositions.forEach((pos, i) => {
+        chests.push({
+          x: pos.x,
+          y: pos.y,
+          opened: false,
+          bonus: 2 + level + i,
+          gold: 5 + level * 2 + i * 2
+        });
+      });
+
+      logEl.innerHTML = "";
+      log(`Vstoupil jsi do dungeon runneru – level ${level}. Zabij všechna monstra a pak dojdi ke dveřím.`);
+    }
+
+    function updatePlayerSymbol() {
+      if (player.raceName === 'Elf') {
+        player.symbol = '🧝';
+      } else if (player.raceName === 'Ork') {
+        player.symbol = '🧌';
+      } else if (player.raceName === 'Trpaslík') {
+        player.symbol = '🧔';
+      } else if (player.raceName === 'Hobit') {
+        player.symbol = '🧑';
+      } else {
+        player.symbol = '🧑';
+      }
+    }
+
+    function renderGrid() {
+      gridEl.innerHTML = "";
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const tile = document.createElement('div');
+          tile.classList.add('tile');
+
+          let char = '';
+          let extraClass = 'empty';
+
+          if (player.x === x && player.y === y) {
+            char = player.symbol;
+            extraClass = 'player';
+          } else if (isWall(x, y)) {
+            char = '🧱';
+            extraClass = 'wall';
+          } else {
+            const m = getMonsterAt(x, y);
+            const c = getChestAt(x, y);
+
+            if (m) {
+              char = m.symbol;
+              extraClass = 'monster';
+            } else if (c) {
+              char = '💰';
+              extraClass = 'chest';
+            } else if (exit.x === x && exit.y === y) {
+              char = '🚪';
+              extraClass = 'exit';
+            } else {
+              char = '.';
+              extraClass = 'empty';
+            }
+          }
+
+          if (!(player.x === x && player.y === y) &&
+              projectilePath.some(p => p.x === x && p.y === y)) {
+            char = projectileType === 'spell' ? '✧' : '➤';
+          }
+
+          tile.textContent = char;
+          tile.classList.add(extraClass);
+          gridEl.appendChild(tile);
+        }
+      }
+    }
+
+    function endGame(text) {
+      gameRunning = false;
+      gameOverText.textContent = text;
+      gameOverOverlay.style.display = 'flex';
+    }
+
+    // ==== pathfinding pro monstra (BFS) ====
+    function findNextStepTowards(start, goal) {
+      if (start.x === goal.x && start.y === goal.y) return null;
+
+      const dirs = [
+        { dx: 1, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 0, dy: -1 }
+      ];
+
+      const visited = Array.from({ length: mapHeight }, () =>
+        Array(mapWidth).fill(false)
+      );
+
+      const queue = [];
+      queue.push({ x: start.x, y: start.y });
+      visited[start.y][start.x] = true;
+
+      const parents = {};
+      const key = (x, y) => `${x},${y}`;
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        if (current.x === goal.x && current.y === goal.y) {
+          let k = key(current.x, current.y);
+          let prev = parents[k];
+          let child = { x: current.x, y: current.y };
+          while (prev && !(prev.x === start.x && prev.y === start.y)) {
+            child = prev;
+            k = key(prev.x, prev.y);
+            prev = parents[k];
+          }
+          return child;
+        }
+
+        for (const d of dirs) {
+          const nx = current.x + d.dx;
+          const ny = current.y + d.dy;
+          if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) continue;
+          if (visited[ny][nx]) continue;
+          if (isWall(nx, ny)) continue;
+
+          const occupied = monsters.some(m => m.hp > 0 &&
+            !(m.x === start.x && m.y === start.y) &&
+            m.x === nx && m.y === ny);
+          if (occupied) continue;
+
+          visited[ny][nx] = true;
+          parents[key(nx, ny)] = { x: current.x, y: current.y };
+          queue.push({ x: nx, y: ny });
+        }
+      }
+      return null;
+    }
+
+    // ==== Pohyb a melee útok ====
+    function tryMove(dx, dy) {
+      if (!gameRunning) return;
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+
+      if (newX < 0 || newX >= mapWidth || newY < 0 || newY >= mapHeight) {
+        log("Narazil jsi do okraje dungeonu.");
+        return;
+      }
+
+      if (isWall(newX, newY)) {
+        log("Narážíš do zdi.");
+        return;
+      }
+
+      const monster = getMonsterAt(newX, newY);
+      if (monster) {
+        attackMonster(monster);
+        return;
+      }
+
+      player.x = newX;
+      player.y = newY;
+      if (dx !== 0 || dy !== 0) {
+        player.facing = { dx, dy };
+      }
+      log(`Posunul ses na (${player.x + 1}, ${player.y + 1}).`);
+
+      const chest = getChestAt(player.x, player.y);
+      if (chest) {
+        chest.opened = true;
+        player.weaponBonus += chest.bonus;
+        let goldGain = chest.gold;
+        if (player.isThief) {
+          goldGain = Math.round(goldGain * THIEF_GOLD_MULTIPLIER);
+        }
+        gold += goldGain;
+        log(`Našel jsi truhlu! Zbraň posílena o +${chest.bonus} útoku a získáváš ${goldGain} zlata.`);
+        addItem(`Truhla: +${chest.bonus} útoku, ${goldGain} zlata`);
+      }
+
+      updateHud();
+      renderGrid();
+
+      if (isSamePos(player, exit)) {
+        const alive = monsters.some(m => m.hp > 0);
+        if (alive) {
+          log("Dveře jsou zamčené, dokud v dungeonu zůstávají monstra.");
+        } else {
+          log("Došel jsi ke dveřím – level dokončen!");
+          gameRunning = false;
+          openShop();
+          return;
+        }
+      }
+
+      monstersAct();
+    }
+
+    function rewardGoldForKill(name) {
+      let gain = 5 + Math.floor(Math.random() * 6) + level * 2;
+      if (player.isThief) {
+        gain = Math.round(gain * THIEF_GOLD_MULTIPLIER);
+      }
+      gold += gain;
+      log(`${name} byl poražen! Získáváš ${gain} zlata.`);
+    }
+
+    function attackMonster(monster) {
+      if (!gameRunning) return;
+      const totalAttack = player.baseAttack + player.weaponBonus;
+      log(`Útočíš na ${monster.name} a dáváš ${totalAttack} poškození.`);
+      monster.hp -= totalAttack;
+
+      if (monster.hp <= 0) {
+        rewardGoldForKill(monster.name);
+      } else {
+        log(`${monster.name} má ještě ${monster.hp} HP.`);
+      }
+
+      monstersAct();
+      updateHud();
+      renderGrid();
+    }
+
+    function monstersAct() {
+      if (!gameRunning) return;
+      monsters.forEach(m => {
+        if (m.hp <= 0) return;
+
+        const dx = player.x - m.x;
+        const dy = player.y - m.y;
+        const distance = Math.abs(dx) + Math.abs(dy);
+
+        if (distance === 1) {
+          // zpřísněná obrana – obrana má menší efekt, dmg nikdy neklesne pod 1
+          const raw = m.attack - Math.floor(player.defense * 0.6);
+          const dmg = Math.max(1, raw);
+          player.hp -= dmg;
+          log(`${m.name} tě zasáhl za ${dmg} poškození!`);
+          if (player.hp <= 0) {
+            player.hp = 0;
+            updateHud();
+            endGame("Zemřel jsi v dungeonu. :(");
+          }
+        } else {
+          const nextStep = findNextStepTowards({ x: m.x, y: m.y }, { x: player.x, y: player.y });
+          if (nextStep) {
+            const occupied = monsters.some(other => other !== m && other.hp > 0 &&
+              other.x === nextStep.x && other.y === nextStep.y);
+            if (!occupied && !(player.x === nextStep.x && player.y === nextStep.y)) {
+              m.x = nextStep.x;
+              m.y = nextStep.y;
+            }
+          }
+        }
+      });
+      updateHud();
+      renderGrid();
+    }
+
+    // Ability 1 – malé léčení
+    function useAbility1() {
+      if (!gameRunning) return;
+      const heal = 4;
+      if (player.hp >= player.maxHp) {
+        log("Ability 1: Už máš plné životy.");
+        return;
+      }
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      log(`Ability 1: Léčíš se o ${heal} HP.`);
+      updateHud();
+    }
+
+    // Line-of-sight pro ranged (kontrola zdí)
+    function hasLineOfSightTo(target) {
+      if (target.x !== player.x && target.y !== player.y) return false;
+      let dx = 0, dy = 0;
+      if (target.x > player.x) dx = 1;
+      else if (target.x < player.x) dx = -1;
+      if (target.y > player.y) dy = 1;
+      else if (target.y < player.y) dy = -1;
+
+      let x = player.x + dx;
+      let y = player.y + dy;
+      while (!(x === target.x && y === target.y)) {
+        if (isWall(x, y)) return false;
+        x += dx;
+        y += dy;
+      }
+      return true;
+    }
+
+    // Najdi nejbližší cíl pro ranged (v řadě/sloupci, vzdálenost 2–4)
+    function findRangedTarget(maxRange = 4) {
+      let best = null;
+      monsters.forEach(m => {
+        if (m.hp <= 0) return;
+        if (m.x !== player.x && m.y !== player.y) return; // musí být v řadě nebo sloupci
+        const dist = Math.abs(m.x - player.x) + Math.abs(m.y - player.y);
+        if (dist < 2 || dist > maxRange) return;
+        if (!hasLineOfSightTo(m)) return;
+        if (!best || dist < best.dist) {
+          let dx = 0, dy = 0;
+          if (m.x > player.x) dx = 1;
+          else if (m.x < player.x) dx = -1;
+          if (m.y > player.y) dy = 1;
+          else if (m.y < player.y) dy = -1;
+          best = { monster: m, dx, dy, dist };
+        }
+      });
+      return best;
+    }
+
+    // Útok na dálku – auto-target
+    function useRangedAttack() {
+      if (!gameRunning) return;
+
+      let dmg;
+      let type = null;
+
+      if (player.archetype === 'Mág') {
+        const cost = 3;
+        if (player.mana < cost) {
+          log("Nemáš dost many na kouzlo na dálku.");
+          return;
+        }
+        player.mana -= cost;
+        dmg = player.baseAttack + player.weaponBonus + 4;
+        type = 'spell';
+        log("Sesíláš kouzlo na dálku.");
+      } else if (player.archetype === 'Lučištník') {
+        const cost = 1;
+        if (player.arrows < cost) {
+          log("Došly ti šípy.");
+          return;
+        }
+        player.arrows -= cost;
+        dmg = player.baseAttack + player.weaponBonus + 3;
+        type = 'arrow';
+        log("Vystřelil jsi šíp.");
+      } else {
+        log("Tvoje postava nemá útok na dálku.");
+        return;
+      }
+
+      const targetInfo = findRangedTarget(4);
+      if (!targetInfo) {
+        log("V dosahu (2–4 polí v řadě/sloupci) není žádný cíl.");
+        updateHud();
+        return;
+      }
+
+      const { monster: target, dx, dy, dist } = targetInfo;
+
+      let x = player.x + dx;
+      let y = player.y + dy;
+      let pathCells = [];
+
+      for (let step = 1; step <= dist; step++) {
+        pathCells.push({ x, y });
+        x += dx;
+        y += dy;
+      }
+
+      projectilePath = pathCells;
+      projectileType = type;
+      updateHud();
+      renderGrid();
+
+      gameRunning = false;
+
+      setTimeout(() => {
+        log(`Útok na dálku zasahuje ${target.name} za ${dmg} poškození.`);
+        target.hp -= dmg;
+        if (target.hp <= 0) {
+          rewardGoldForKill(target.name);
+        } else {
+          log(`${target.name} má ještě ${target.hp} HP.`);
+        }
+
+        projectilePath = [];
+        projectileType = null;
+        updateHud();
+        renderGrid();
+
+        gameRunning = true;
+        monstersAct();
+      }, 180);
+    }
+
+    // ==== Obchod ====
+    function openShop() {
+      shopInfo.textContent = `Level ${level} dokončen. Máš ${gold} zlata. Vyber si vylepšení nebo pokračuj dál.`;
+      updateShopButtons();
+      shopOverlay.style.display = 'flex';
+      updateHud();
+    }
+
+    shopItems.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') return;
+      const action = e.target.dataset.action;
+      let cost = 0;
+
+      if (action === 'hp') {
+        cost = shopCosts.hp;
+        if (gold >= cost) {
+          gold -= cost;
+          player.maxHp += 5;
+          player.hp += 5;
+          shopCosts.hp = Math.round(shopCosts.hp * SHOP_INFLATION);
+          log("Kupuješ: +5 max HP (cena příště vyšší).");
+          addItem("+5 max HP (obchod)");
+        } else {
+          log("Nemáš dost zlata na +5 max HP.");
+        }
+      } else if (action === 'atk') {
+        cost = shopCosts.atk;
+        if (gold >= cost) {
+          gold -= cost;
+          player.baseAttack += 2;
+          shopCosts.atk = Math.round(shopCosts.atk * SHOP_INFLATION);
+          log("Kupuješ: +2 základní útok (cena příště vyšší).");
+          addItem("+2 základní útok (obchod)");
+        } else {
+          log("Nemáš dost zlata na +2 útok.");
+        }
+      } else if (action === 'def') {
+        cost = shopCosts.def;
+        if (gold >= cost) {
+          gold -= cost;
+          // válečník těží z obrany víc – malé zvýšení bonusu
+          const bonus = (player.archetype === 'Válečník') ? 2 : 1;
+          player.defense += bonus;
+          shopCosts.def = Math.round(shopCosts.def * SHOP_INFLATION);
+          log(`Kupuješ: +${bonus} obrana (cena příště vyšší).`);
+          addItem(`+${bonus} obrana (obchod)`);
+        } else {
+          log("Nemáš dost zlata na +1 obranu.");
+        }
+      } else if (action === 'heal') {
+        cost = shopCosts.heal;
+        if (gold >= cost) {
+          gold -= cost;
+          player.hp = player.maxHp;
+          shopCosts.heal = Math.round(shopCosts.heal * SHOP_INFLATION);
+          log("Kupuješ: plné léčení (cena příště vyšší).");
+        } else {
+          log("Nemáš dost zlata na léčení.");
+        }
+      }
+
+      shopInfo.textContent = `Level ${level} dokončen. Máš ${gold} zlata.`;
+      updateShopButtons();
+      updateHud();
+    });
+
+    nextLevelBtn.addEventListener('click', () => {
+      level += 1;
+      player.hp = player.maxHp;
+      if (player.archetype === 'Mág') {
+        player.mana = player.maxMana;
+      }
+      if (player.archetype === 'Lučištník') {
+        player.arrows += 3;
+      }
+      shopOverlay.style.display = 'none';
+      startLevel();
+    });
+
+    // ==== Obsluha kláves ====
+    window.addEventListener('keydown', (e) => {
+      if (!gameRunning) return;
+
+      keyPressCount++;
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+           'w','W','a','A','s','S','d','D',' ','1','2'].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          tryMove(0, -1);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          tryMove(0, 1);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          tryMove(-1, 0);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          tryMove(1, 0);
+          break;
+        case '1':
+          useAbility1();
+          break;
+        case '2':
+          useRangedAttack();
+          break;
+        case ' ': {
+          const neighbors = [
+            { x: player.x + 1, y: player.y },
+            { x: player.x - 1, y: player.y },
+            { x: player.x, y: player.y + 1 },
+            { x: player.x, y: player.y - 1 }
+          ];
+          const target = neighbors
+            .map(pos => getMonsterAt(pos.x, pos.y))
+            .find(m => m);
+          if (target) {
+            attackMonster(target);
+          } else {
+            log("Žádné monstrum v dosahu útoku.");
+          }
+          break;
+        }
+      }
+      updateHud();
+    });
+
+    // ==== Start levelu ====
+    function startLevel() {
+      initDungeon();
+      updateHud();
+      renderGrid();
+      gameRunning = true;
+    }
+
+    // ==== Start hry z menu ====
+    document.getElementById('startGame').addEventListener('click', () => {
+      const raceValue = document.getElementById('raceSelect').value;
+
+      player.isThief = false;
+      player.items = [];
+      updateInventory();
+
+      if (raceValue === 'human') {
+        player.raceName = 'Člověk';
+        player.archetype = 'Mág';
+        player.maxHp = 20;
+        player.baseAttack = 7;
+        player.defense = 0;
+        player.maxMana = 12;
+        player.mana = 12;
+        player.arrows = 0;
+      } else if (raceValue === 'elf') {
+        player.raceName = 'Elf';
+        player.archetype = 'Lučištník';
+        player.maxHp = 22;
+        player.baseAttack = 6;
+        player.defense = 0;
+        player.maxMana = 0;
+        player.mana = 0;
+        player.arrows = 7;
+      } else if (raceValue === 'dwarf') {
+        player.raceName = 'Trpaslík';
+        player.archetype = 'Válečník';
+        player.maxHp = 32;
+        player.baseAttack = 6;
+        player.defense = 3;   // lepší zbroj
+        player.maxMana = 0;
+        player.mana = 0;
+        player.arrows = 0;
+      } else if (raceValue === 'hobbit') {
+        player.raceName = 'Hobit';
+        player.archetype = 'Zloděj';
+        player.maxHp = 24;
+        player.baseAttack = 5;
+        player.defense = 1;
+        player.maxMana = 0;
+        player.mana = 0;
+        player.arrows = 0;
+        player.isThief = true;
+      }
+
+      player.hp = player.maxHp;
+      player.weaponBonus = 0;
+      player.facing = { dx: 1, dy: 0 };
+      updatePlayerSymbol();
+
+      level = 1;
+      gold = 0;
+      keyPressCount = 0;
+
+      shopCosts.hp = 10;
+      shopCosts.atk = 10;
+      shopCosts.def = 8;
+      shopCosts.heal = 6;
+
+      gameOverOverlay.style.display = 'none';
+      shopOverlay.style.display = 'none';
+
+      menuEl.classList.add('hidden');
+      gameEl.classList.remove('hidden');
+
+      startLevel();
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      gameOverOverlay.style.display = 'none';
+      gameEl.classList.add('hidden');
+      menuEl.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
