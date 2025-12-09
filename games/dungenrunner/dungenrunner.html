@@ -133,6 +133,10 @@
       background: #205c20;
     }
 
+    .tile.wall {
+      background: #444;
+    }
+
     .tile.empty {
       background: #181818;
       color: #444;
@@ -201,14 +205,14 @@
     <label for="raceSelect">Rasa</label>
     <select id="raceSelect">
       <option value="human">Člověk (+0 HP, +0 útok)</option>
-      <option value="elf">Elf (+0 HP, +2 útok)</option>
+      <option value="elf">Elf (+0 HP, +2 útok, šípy)</option>
       <option value="orc">Ork (+5 HP, +0 útok)</option>
     </select>
 
     <label for="classSelect">Povolání</label>
     <select id="classSelect">
       <option value="warrior">Válečník (30 HP, 6 útok, 2 obrana)</option>
-      <option value="mage">Mág (20 HP, 8 útok, 0 obrana)</option>
+      <option value="mage">Mág (20 HP, 8 útok, 0 obrana, mana)</option>
       <option value="rogue">Zloděj (24 HP, 5 útok, 1 obrana)</option>
     </select>
 
@@ -224,20 +228,22 @@
       <span id="hudAttack"></span>
       <span id="hudWeapon"></span>
       <span id="hudGold"></span>
+      <span id="hudResource"></span>
       <span id="hudKeys"></span>
     </div>
 
     <div id="controls">
       <strong>Ovládání:</strong>
-      Pohyb: WASD nebo šipky | Útok: mezerník (na sousední monstrum) | Ability: klávesa 1 (malé léčení).  
-      Cíl: posbírej zlato a dojdi ke dveřím 🚪 pro další level (obchod se objeví po dokončení levelu).
+      Pohyb: WASD nebo šipky | Blízký útok: mezerník (na sousední monstrum) | Ability 1: klávesa 1 (malé léčení) |  
+      Útok na dálku: klávesa 2 – Mág = kouzlo (mana), Elf = šíp.  
+      Cíl: zabij všechna monstra, posbírej zlato a dojdi ke dveřím 🚪. Dveře se otevřou až po vyčištění dungeonu.
     </div>
 
     <div id="grid"></div>
     <div id="log"></div>
   </section>
 
-  <!-- Game over / vítězství overlay -->
+  <!-- Game over -->
   <div id="gameOverOverlay">
     <h2 id="gameOverText"></h2>
     <button id="restartBtn">Hrát znovu</button>
@@ -248,10 +254,10 @@
     <h2>Obchod mezi levely</h2>
     <p id="shopInfo"></p>
     <div id="shopItems">
-      <button data-action="hp">+5 max HP (10 zlata)</button>
-      <button data-action="atk">+2 základní útok (10 zlata)</button>
-      <button data-action="def">+1 obrana (8 zlata)</button>
-      <button data-action="heal">Vyléčit na plné HP (6 zlata)</button>
+      <button data-action="hp"></button>
+      <button data-action="atk"></button>
+      <button data-action="def"></button>
+      <button data-action="heal"></button>
     </div>
     <button id="nextLevelBtn">Další level ▶</button>
   </div>
@@ -276,11 +282,16 @@
       defense: 0,
       weaponBonus: 0,
       className: "",
-      raceName: ""
+      raceName: "",
+      maxMana: 0,
+      mana: 0,
+      arrows: 0,
+      facing: { dx: 1, dy: 0 }
     };
 
     let monsters = [];
     let chests = [];
+    let walls = [];
     const exit = { x: 9, y: 0 }; // východ
     let keyPressCount = 0;
     let gameRunning = false;
@@ -293,6 +304,7 @@
     const hudAttack  = document.getElementById('hudAttack');
     const hudWeapon  = document.getElementById('hudWeapon');
     const hudGold    = document.getElementById('hudGold');
+    const hudResource = document.getElementById('hudResource');
     const hudKeys    = document.getElementById('hudKeys');
     const gridEl     = document.getElementById('grid');
     const logEl      = document.getElementById('log');
@@ -305,6 +317,30 @@
     const shopInfo    = document.getElementById('shopInfo');
     const shopItems   = document.getElementById('shopItems');
     const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+    // ==== Obchod – inflace cen ====
+    const SHOP_INFLATION = 1.4;
+    const shopCosts = {
+      hp: 10,
+      atk: 10,
+      def: 8,
+      heal: 6
+    };
+
+    function updateShopButtons() {
+      shopItems.querySelectorAll('button').forEach(btn => {
+        const action = btn.dataset.action;
+        if (action === 'hp') {
+          btn.textContent = `+5 max HP (${shopCosts.hp} zlata)`;
+        } else if (action === 'atk') {
+          btn.textContent = `+2 základní útok (${shopCosts.atk} zlata)`;
+        } else if (action === 'def') {
+          btn.textContent = `+1 obrana (${shopCosts.def} zlata)`;
+        } else if (action === 'heal') {
+          btn.textContent = `Vyléčit na plné HP (${shopCosts.heal} zlata)`;
+        }
+      });
+    }
 
     // ==== Pomocné funkce ====
     function log(msg) {
@@ -322,11 +358,24 @@
       hudAttack.textContent = `Útok: ${totalAttack} (zákl. ${player.baseAttack}, zbraň +${player.weaponBonus})`;
       hudWeapon.textContent = player.weaponBonus > 0 ? `Zbraň: vylepšená` : `Zbraň: základní`;
       hudGold.textContent = `Zlato: ${gold}`;
+
+      let resText = '';
+      if (player.maxMana > 0) {
+        resText = `Mana: ${player.mana}/${player.maxMana}`;
+      } else if (player.raceName === 'Elf') {
+        resText = `Šípy: ${player.arrows}`;
+      }
+      hudResource.textContent = resText;
+
       hudKeys.textContent = `Stisknuté klávesy: ${keyPressCount}`;
     }
 
     function isSamePos(a, b) {
       return a.x === b.x && a.y === b.y;
+    }
+
+    function isWall(x, y) {
+      return walls.some(w => w.x === x && w.y === y);
     }
 
     function getMonsterAt(x, y) {
@@ -358,13 +407,21 @@
     function initDungeon() {
       monsters = [];
       chests = [];
+      walls = [];
       // Player start
       player.x = 0;
       player.y = 9;
 
-      const forbidden = [{ x: player.x, y: player.y }, exit];
+      const baseForbidden = [{ x: player.x, y: player.y }, exit];
 
-      // počet monster a truhel dle levelu
+      // zdi – počet roste s levelem
+      const wallCount = Math.min(20, 6 + level * 2);
+      const wallPositions = randomFreePositions(wallCount, baseForbidden);
+      walls = wallPositions;
+
+      const forbidden = baseForbidden.concat(walls);
+
+      // počet monster a truhel dle levelu – čím dál víc a silnější
       const monsterCount = Math.min(12, 3 + level * 2);
       const chestCount   = 2 + Math.floor(level / 2);
 
@@ -374,11 +431,14 @@
 
       monsterPositions.forEach((pos, i) => {
         const type = MONSTER_TYPES[Math.floor(Math.random() * MONSTER_TYPES.length)];
+        // inflace nepřátel s levelem
+        const extraHp = (level - 1) * 5;                      // HP roste docela rychle
+        const extraAtk = Math.floor((level - 1) / 1.5) + 1;   // útok roste pomaleji
         monsters.push({
           x: pos.x,
           y: pos.y,
-          hp: type.hp + (level - 1) * 3,
-          attack: type.attack + Math.floor((level - 1) / 2),
+          hp: type.hp + Math.max(0, extraHp),
+          attack: type.attack + Math.max(0, extraAtk),
           name: `${type.name} ${i + 1}`,
           symbol: type.symbol
         });
@@ -395,7 +455,7 @@
       });
 
       logEl.innerHTML = "";
-      log(`Vstoupil jsi do dungeon runneru – level ${level}. Najdi východ, ale nezapomeň posbírat zlato!`);
+      log(`Vstoupil jsi do dungeon runneru – level ${level}. Zabij všechna monstra a pak dojdi ke dveřím.`);
     }
 
     function renderGrid() {
@@ -411,6 +471,9 @@
           if (player.x === x && player.y === y) {
             char = '🧙';
             extraClass = 'player';
+          } else if (isWall(x, y)) {
+            char = '🧱';
+            extraClass = 'wall';
           } else {
             const m = getMonsterAt(x, y);
             const c = getChestAt(x, y);
@@ -443,7 +506,7 @@
       gameOverOverlay.style.display = 'flex';
     }
 
-    // ==== Ovládání ====
+    // ==== Pohyb a melee útok ====
     function tryMove(dx, dy) {
       if (!gameRunning) return;
       const newX = player.x + dx;
@@ -451,7 +514,13 @@
 
       // mimo mapu
       if (newX < 0 || newX >= mapWidth || newY < 0 || newY >= mapHeight) {
-        log("Narazil jsi do zdi dungeonu.");
+        log("Narazil jsi do okraje dungeonu.");
+        return;
+      }
+
+      // zdi – neprůchodné
+      if (isWall(newX, newY)) {
+        log("Narážíš do zdi.");
         return;
       }
 
@@ -462,8 +531,12 @@
         return;
       }
 
+      // skutečný pohyb
       player.x = newX;
       player.y = newY;
+      if (dx !== 0 || dy !== 0) {
+        player.facing = { dx, dy };
+      }
       log(`Posunul ses na (${player.x + 1}, ${player.y + 1}).`);
 
       const chest = getChestAt(player.x, player.y);
@@ -477,15 +550,26 @@
       updateHud();
       renderGrid();
 
-      // Konec levelu je až ve dveřích – aby šlo posbírat zlato
+      // Dveře fungují až po zabití všech monster
       if (isSamePos(player, exit)) {
-        log("Došel jsi ke dveřím – level dokončen!");
-        gameRunning = false;
-        openShop();
-        return;
+        const alive = monsters.some(m => m.hp > 0);
+        if (alive) {
+          log("Dveře jsou zamčené, dokud v dungeonu zůstávají monstra.");
+        } else {
+          log("Došel jsi ke dveřím – level dokončen!");
+          gameRunning = false;
+          openShop();
+          return;
+        }
       }
 
       monstersAct();
+    }
+
+    function rewardGoldForKill(name) {
+      const gain = 5 + Math.floor(Math.random() * 6) + level * 2;
+      gold += gain;
+      log(`${name} byl poražen! Získáváš ${gain} zlata.`);
     }
 
     function attackMonster(monster) {
@@ -495,9 +579,7 @@
       monster.hp -= totalAttack;
 
       if (monster.hp <= 0) {
-        const gain = 5 + Math.floor(Math.random() * 6) + level * 2;
-        gold += gain;
-        log(`${monster.name} byl poražen! Získáváš ${gain} zlata.`);
+        rewardGoldForKill(monster.name);
       } else {
         log(`${monster.name} má ještě ${monster.hp} HP.`);
       }
@@ -527,7 +609,7 @@
             endGame("Zemřel jsi v dungeonu. :(");
           }
         } else {
-          // jednoduché AI – snaha přiblížit se
+          // jednoduché AI – snaha přiblížit se, respektuje zdi i ostatní monstra
           let stepX = 0, stepY = 0;
           if (Math.abs(dx) > Math.abs(dy)) {
             stepX = dx > 0 ? 1 : -1;
@@ -537,12 +619,13 @@
 
           const newX = m.x + stepX;
           const newY = m.y + stepY;
-          // kontrola kolize s jiným monstrem
           const occupied = monsters.some(other => other !== m && other.hp > 0 &&
             other.x === newX && other.y === newY);
+
           if (!occupied &&
               newX >= 0 && newX < mapWidth &&
               newY >= 0 && newY < mapHeight &&
+              !isWall(newX, newY) &&
               !(player.x === newX && player.y === newY)) {
             m.x = newX;
             m.y = newY;
@@ -566,9 +649,84 @@
       updateHud();
     }
 
+    // Útok na dálku – klávesa 2
+    function useRangedAttack() {
+      if (!gameRunning) return;
+
+      let dmg;
+      let usedResource = false;
+
+      if (player.className === 'Mág') {
+        const cost = 3;
+        if (player.mana < cost) {
+          log("Nemáš dost many na kouzlo na dálku.");
+          return;
+        }
+        player.mana -= cost;
+        dmg = player.baseAttack + player.weaponBonus + 4;
+        usedResource = true;
+        log("Sesíláš kouzlo na dálku.");
+      } else if (player.raceName === 'Elf') {
+        const cost = 1;
+        if (player.arrows < cost) {
+          log("Došly ti šípy.");
+          return;
+        }
+        player.arrows -= cost;
+        dmg = player.baseAttack + player.weaponBonus + 3;
+        usedResource = true;
+        log("Vystřelil jsi šíp.");
+      } else {
+        log("Tvoje postava nemá útok na dálku.");
+        return;
+      }
+
+      const dx = player.facing.dx;
+      const dy = player.facing.dy;
+      if (dx === 0 && dy === 0) {
+        log("Nejsi otočený žádným směrem. Nejdřív se pohní.");
+        if (usedResource) updateHud();
+        return;
+      }
+
+      let x = player.x + dx;
+      let y = player.y + dy;
+      let hit = false;
+
+      // range do 4 polí, zastaví se na zdi
+      for (let r = 1; r <= 4; r++) {
+        if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) break;
+        if (isWall(x, y)) break;
+
+        const m = getMonsterAt(x, y);
+        if (m) {
+          log(`Útok na dálku zasahuje ${m.name} za ${dmg} poškození.`);
+          m.hp -= dmg;
+          if (m.hp <= 0) {
+            rewardGoldForKill(m.name);
+          } else {
+            log(`${m.name} má ještě ${m.hp} HP.`);
+          }
+          hit = true;
+          break;
+        }
+        x += dx;
+        y += dy;
+      }
+
+      if (!hit) {
+        log("Útok na dálku nic netrefil.");
+      }
+
+      updateHud();
+      renderGrid();
+      monstersAct();
+    }
+
     // ==== Obchod ====
     function openShop() {
       shopInfo.textContent = `Level ${level} dokončen. Máš ${gold} zlata. Vyber si vylepšení nebo pokračuj dál.`;
+      updateShopButtons();
       shopOverlay.style.display = 'flex';
       updateHud();
     }
@@ -579,51 +737,62 @@
       let cost = 0;
 
       if (action === 'hp') {
-        cost = 10;
+        cost = shopCosts.hp;
         if (gold >= cost) {
           gold -= cost;
           player.maxHp += 5;
           player.hp += 5;
-          log("Kupuješ: +5 max HP.");
+          shopCosts.hp = Math.round(shopCosts.hp * SHOP_INFLATION);
+          log("Kupuješ: +5 max HP (cena příště vyšší).");
         } else {
           log("Nemáš dost zlata na +5 max HP.");
         }
       } else if (action === 'atk') {
-        cost = 10;
+        cost = shopCosts.atk;
         if (gold >= cost) {
           gold -= cost;
           player.baseAttack += 2;
-          log("Kupuješ: +2 základní útok.");
+          shopCosts.atk = Math.round(shopCosts.atk * SHOP_INFLATION);
+          log("Kupuješ: +2 základní útok (cena příště vyšší).");
         } else {
           log("Nemáš dost zlata na +2 útok.");
         }
       } else if (action === 'def') {
-        cost = 8;
+        cost = shopCosts.def;
         if (gold >= cost) {
           gold -= cost;
           player.defense += 1;
-          log("Kupuješ: +1 obrana.");
+          shopCosts.def = Math.round(shopCosts.def * SHOP_INFLATION);
+          log("Kupuješ: +1 obrana (cena příště vyšší).");
         } else {
           log("Nemáš dost zlata na +1 obranu.");
         }
       } else if (action === 'heal') {
-        cost = 6;
+        cost = shopCosts.heal;
         if (gold >= cost) {
           gold -= cost;
           player.hp = player.maxHp;
-          log("Kupuješ: plné léčení.");
+          shopCosts.heal = Math.round(shopCosts.heal * SHOP_INFLATION);
+          log("Kupuješ: plné léčení (cena příště vyšší).");
         } else {
           log("Nemáš dost zlata na léčení.");
         }
       }
 
       shopInfo.textContent = `Level ${level} dokončen. Máš ${gold} zlata.`;
+      updateShopButtons();
       updateHud();
     });
 
     nextLevelBtn.addEventListener('click', () => {
       level += 1;
-      player.hp = player.maxHp; // start dalšího levelu s plnými HP
+      player.hp = player.maxHp; // další level s plnými HP
+      if (player.maxMana > 0) {
+        player.mana = player.maxMana;   // doplnění many
+      }
+      if (player.raceName === 'Elf') {
+        player.arrows += 3;             // trochu nových šípů
+      }
       shopOverlay.style.display = 'none';
       startLevel();
     });
@@ -634,7 +803,8 @@
 
       keyPressCount++;
       // aby stránka nescrollovala šipkami/mezerou
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','W','a','A','s','S','d','D',' '].includes(e.key)) {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+           'w','W','a','A','s','S','d','D',' ','1','2'].includes(e.key)) {
         e.preventDefault();
       }
 
@@ -679,6 +849,9 @@
         case '1':
           useAbility1();
           break;
+        case '2':
+          useRangedAttack();
+          break;
       }
       updateHud();
     });
@@ -696,22 +869,28 @@
       const raceValue = document.getElementById('raceSelect').value;
       const classValue = document.getElementById('classSelect').value;
 
-      // nastavení základních statů podle classy
+      // základní staty podle classy
       if (classValue === 'warrior') {
         player.maxHp = 30;
         player.baseAttack = 6;
         player.defense = 2;
         player.className = 'Válečník';
+        player.maxMana = 0;
+        player.mana = 0;
       } else if (classValue === 'mage') {
         player.maxHp = 20;
         player.baseAttack = 8;
         player.defense = 0;
         player.className = 'Mág';
+        player.maxMana = 10;
+        player.mana = 10;
       } else if (classValue === 'rogue') {
         player.maxHp = 24;
         player.baseAttack = 5;
         player.defense = 1;
         player.className = 'Zloděj';
+        player.maxMana = 0;
+        player.mana = 0;
       }
 
       // rasa
@@ -720,17 +899,26 @@
       } else if (raceValue === 'elf') {
         player.raceName = 'Elf';
         player.baseAttack += 2;
+        player.arrows = 6;
       } else if (raceValue === 'orc') {
         player.raceName = 'Ork';
         player.maxHp += 5;
+        player.arrows = 0;
       }
 
       player.hp = player.maxHp;
       player.weaponBonus = 0;
+      player.facing = { dx: 1, dy: 0 }; // výchozí směr doprava
 
       level = 1;
       gold = 0;
       keyPressCount = 0;
+
+      // reset cen v obchodě
+      shopCosts.hp = 10;
+      shopCosts.atk = 10;
+      shopCosts.def = 8;
+      shopCosts.heal = 6;
 
       gameOverOverlay.style.display = 'none';
       shopOverlay.style.display = 'none';
