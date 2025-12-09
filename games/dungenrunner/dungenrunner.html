@@ -317,7 +317,7 @@ const THIEF_GOLD_MULTIPLIER = 1.6; // Hobit/Zloděj – víc zlata
 
 // Itemy na zemi
 const GROUND_ITEM_DEFS = [
-  { kind: 'health', symbol: '💊', name: 'Lektvar zdraví' },
+  { kind: 'health', symbol: '🩸', name: 'Lektvar zdraví' },
   { kind: 'mana',   symbol: '🔮', name: 'Křišťál many' },
   { kind: 'arrows', symbol: '🏹', name: 'Toulec šípů' },
   { kind: 'attack', symbol: '📜', name: 'Svitek síly' },
@@ -652,11 +652,11 @@ function updatePlayerSymbol() {
   if (player.archetype === 'Mág') {
     player.symbol = '🧙';
   } else if (player.archetype === 'Lučištník') {
-    player.symbol = '🏹';
+    player.symbol = '🧝🏻';
   } else if (player.archetype === 'Válečník') {
-    player.symbol = '🛡️';
+    player.symbol = '🥷';
   } else if (player.archetype === 'Zloděj') {
-    player.symbol = '🗡️';
+    player.symbol = '🥷🏿';
   } else {
     player.symbol = '🧑';
   }
