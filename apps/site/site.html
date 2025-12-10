@@ -1,738 +1,259 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <title>Učím se počítačové sítě</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-        }
-
-        #container {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .card {
-            background: #ffffff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        #main-task1, #main-task2 {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .network-panel {
-            flex: 2 1 500px;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-            position: relative;
-            min-height: 260px;
-        }
-
-        .network-panel h2 {
-            margin-top: 0;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        /* --- MISE 1: „plátno“ sítě --- */
-        .network-diagram {
-            position: relative;
-            width: 600px;
-            height: 240px;
-            margin: 0 auto;
-        }
-
-        .network-diagram svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 600px;
-            height: 240px;
-            pointer-events: none; /* aby nepřekáželo drag & dropu */
-        }
-
-        .node-slot-abs {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .node {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: #fafafa;
-            border: 2px solid #bdbdbd;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
-            position: relative;
-        }
-
-        .node-text {
-            font-size: 24px;
-            pointer-events: none;
-        }
-
-        .node-label {
-            font-size: 12px;
-            text-align: center;
-            margin-top: 4px;
-            max-width: 90px;
-        }
-
-        .node.highlight {
-            border-color: #42a5f5;
-            background: #e3f2fd;
-        }
-
-        .node.correct {
-            border-color: #66bb6a;
-            background: #e8f5e9;
-        }
-
-        .node.wrong {
-            border-color: #ef5350;
-            background: #ffebee;
-        }
-
-        .node.selected {
-            border-color: #ffb300;
-            background: #fff8e1;
-        }
-
-        /* Tooltipy */
-        .node.has-tooltip:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(33, 33, 33, 0.95);
-            color: #fff;
-            padding: 6px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .node.has-tooltip:hover::before {
-            content: "";
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 6px;
-            border-style: solid;
-            border-color: rgba(33, 33, 33, 0.95) transparent transparent transparent;
-            z-index: 9;
-        }
-
-        /* Panel s kartičkami */
-        #devices-panel {
-            flex: 1 1 250px;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-            min-height: 260px;
-        }
-
-        #devices-panel h2 {
-            margin-top: 0;
-            font-size: 18px;
-        }
-
-        .device {
-            padding: 8px 10px;
-            margin: 5px 0;
-            background: #e3f2fd;
-            border: 1px solid #90caf9;
-            border-radius: 6px;
-            cursor: grab;
-            text-align: center;
-            font-size: 16px;
-        }
-
-        .device.dragging {
-            opacity: 0.5;
-        }
-
-        .device::before {
-            margin-right: 4px;
-        }
-
-        .device[data-device^="client"]::before {
-            content: "💻 ";
-        }
-
-        .device[data-device="switch"]::before {
-            content: "🧷 ";
-        }
-
-        .device[data-device="router"]::before {
-            content: "📡 ";
-        }
-
-        .device[data-device="internet"]::before {
-            content: "☁️ ";
-        }
-
-        /* --- Tlačítka a zprávy --- */
-        #controls-task1, #controls-task2 {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        button {
-            padding: 8px 16px;
-            font-size: 16px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            background: #42a5f5;
-            color: white;
-        }
-
-        button:hover {
-            background: #1e88e5;
-        }
-
-        .btn-grey {
-            background: #9e9e9e;
-        }
-
-        .btn-grey:hover {
-            background: #757575;
-        }
-
-        .btn-success {
-            background: #43a047;
-        }
-
-        .btn-success:hover {
-            background: #2e7d32;
-        }
-
-        #message-task1, #message-task2 {
-            margin-top: 10px;
-            font-weight: bold;
-            text-align: center;
-            min-height: 24px;
-        }
-
-        /* --- MISE 2: grid + klikání --- */
-        .network-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            grid-template-rows: repeat(3, 120px);
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-
-        .node-slot {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .node2 {
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-        }
-
-        .node2:hover {
-            border-color: #ffa000;
-            background: #fff3e0;
-        }
-
-        .pos2-pc      { grid-column: 1; grid-row: 2; }
-        .pos2-r1      { grid-column: 2; grid-row: 2; }
-        .pos2-r2      { grid-column: 3; grid-row: 1; }
-        .pos2-r3      { grid-column: 3; grid-row: 3; }
-        .pos2-internet{ grid-column: 4; grid-row: 2; }
-        .pos2-server  { grid-column: 5; grid-row: 2; }
-
-        .node.correct-path {
-            border-color: #66bb6a;
-            background: #e8f5e9;
-        }
-
-        .node.wrong-path {
-            border-color: #ef5350;
-            background: #ffebee;
-        }
-
-        .link2 {
-            position: absolute;
-            background: #9e9e9e;
-            z-index: 0;
-        }
-
-        .link2.bad {
-            background: #ef5350;
-        }
-
-        #path-preview {
-            margin-top: 10px;
-            text-align: center;
-            font-size: 14px;
-            min-height: 20px;
-        }
-    </style>
-</head>
-<body>
-<div id="container">
-    <h1>Učím se počítačové sítě</h1>
-
-    <!-- MISE 1 -->
-    <section id="task1" class="card">
-        <h2>Mise 1 – Rozpoznej zařízení v lokální síti</h2>
-        <p>
-            V této síti jsou dva počítače, jeden switch, jeden router a internetový „mrak“.
-            Přetáhni popisky na správné uzly. Najedeš-li na uzel myší, zobrazí se nápověda.
-        </p>
-
-        <div id="main-task1">
-            <!-- Obrázek sítě: PC1 + PC2 → Switch → Router → Internet -->
-            <div id="network-panel-task1" class="network-panel">
-                <h2>Obrázek sítě</h2>
-                <div class="network-diagram">
-                    <!-- Spoje kreslíme pomocí SVG, uzly jsou nad tím -->
-                    <svg viewBox="0 0 600 240">
-                        <!-- PC1 (70,70) -> Switch (300,70) -->
-                        <line x1="105" y1="70" x2="265" y2="70" stroke="#9e9e9e" stroke-width="4" />
-                        <!-- Switch (300,70) -> Router (530,70) -->
-                        <line x1="335" y1="70" x2="495" y2="70" stroke="#9e9e9e" stroke-width="4" />
-                        <!-- Router (530,70) -> Internet (530,190) -->
-                        <line x1="530" y1="105" x2="530" y2="155" stroke="#9e9e9e" stroke-width="4" />
-                        <!-- PC2 (70,190) -> spoj na y=120 -> Switch -->
-                        <line x1="70" y1="190" x2="70" y2="120" stroke="#9e9e9e" stroke-width="4" />
-                        <line x1="70" y1="120" x2="265" y2="120" stroke="#9e9e9e" stroke-width="4" />
-                    </svg>
-
-                    <!-- Uzly (kolečká) – top/left zhruba podle souřadnic výše -->
-                    <!-- Počítač 1 (center 70,70) -->
-                    <div class="node-slot-abs" style="left:35px; top:35px;">
-                        <div class="node has-tooltip"
-                             data-expected="client1"
-                             data-role="dropzone"
-                             data-tooltip="Počítač žáka – koncové zařízení č. 1.">
-                            <span class="node-text">?</span>
-                        </div>
-                        <div class="node-label">?</div>
-                    </div>
-
-                    <!-- Switch (center 300,70) -->
-                    <div class="node-slot-abs" style="left:265px; top:35px;">
-                        <div class="node has-tooltip"
-                             data-expected="switch"
-                             data-role="dropzone"
-                             data-tooltip="Switch (přepínač) spojuje počítače v jedné síti.">
-                            <span class="node-text">?</span>
-                        </div>
-                        <div class="node-label">?</div>
-                    </div>
-
-                    <!-- Router (center 530,70) -->
-                    <div class="node-slot-abs" style="left:495px; top:35px;">
-                        <div class="node has-tooltip"
-                             data-expected="router"
-                             data-role="dropzone"
-                             data-tooltip="Router (směrovač) spojuje naši síť s internetem.">
-                            <span class="node-text">?</span>
-                        </div>
-                        <div class="node-label">?</div>
-                    </div>
-
-                    <!-- Počítač 2 (center 70,190) -->
-                    <div class="node-slot-abs" style="left:35px; top:155px;">
-                        <div class="node has-tooltip"
-                             data-expected="client2"
-                             data-role="dropzone"
-                             data-tooltip="Počítač žáka – koncové zařízení č. 2.">
-                            <span class="node-text">?</span>
-                        </div>
-                        <div class="node-label">?</div>
-                    </div>
-
-                    <!-- Internet (center 530,190) -->
-                    <div class="node-slot-abs" style="left:495px; top:155px;">
-                        <div class="node has-tooltip"
-                             data-expected="internet"
-                             data-role="dropzone"
-                             data-tooltip="Internet – obrovská síť dalších sítí mimo naši místnost.">
-                            <span class="node-text">?</span>
-                        </div>
-                        <div class="node-label">?</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Popisky -->
-            <div id="devices-panel">
-                <h2>Popisky zařízení</h2>
-                <p>Přetáhni na správné uzly v síti:</p>
-                <div class="device" draggable="true" data-device="client1" id="dev-client1">Počítač 1</div>
-                <div class="device" draggable="true" data-device="client2" id="dev-client2">Počítač 2</div>
-                <div class="device" draggable="true" data-device="switch"  id="dev-switch">Switch (přepínač)</div>
-                <div class="device" draggable="true" data-device="router"  id="dev-router">Router</div>
-                <div class="device" draggable="true" data-device="internet" id="dev-internet">Internet</div>
-            </div>
-        </div>
-
-        <div id="controls-task1">
-            <button id="check-task1">Ověřit řešení</button>
-            <button id="reset-task1" class="btn-grey">Reset</button>
-            <button id="next-task" class="btn-success" style="display:none;">Pokračovat na misi 2</button>
-            <div id="message-task1"></div>
-        </div>
-    </section>
-
-    <!-- MISE 2 -->
-    <section id="task2" class="card" style="display:none;">
-        <h2>Mise 2 – Najdi cestu, kterou putuje paket</h2>
-        <p>
-            Teď už víš, jak vypadají části sítě. Tvým úkolem je vybrat cestu,
-            kterou projde datový paket z <strong>tvého počítače (start)</strong>
-            až na <strong>server na internetu</strong>.
-        </p>
-        <ul>
-            <li>Nejdřív klikni na <strong>Počítač (start)</strong>.</li>
-            <li>Pak klikni na další uzly v pořadí, jak půjde paket.</li>
-            <li>Potřebuješ přesně <strong>5 kroků</strong> (včetně startu a cíle).</li>
-            <li>Pod obrázkem vidíš zvolenou cestu.</li>
-        </ul>
-
-        <div id="main-task2">
-            <div id="network-panel-task2" class="network-panel">
-                <h2>Průchod internetem</h2>
-                <div class="network-grid">
-                    <!-- Počítač (start) -->
-                    <div class="node-slot pos2-pc">
-                        <div class="node has-tooltip node2"
-                             data-id="start"
-                             data-name="Počítač"
-                             data-tooltip="Tvůj počítač – začátek cesty paketu.">
-                            💻
-                        </div>
-                        <div class="node-label">Počítač (start)</div>
-                    </div>
-
-                    <!-- Router 1 -->
-                    <div class="node-slot pos2-r1">
-                        <div class="node has-tooltip node2"
-                             data-id="r1"
-                             data-name="Router 1"
-                             data-tooltip="První router – předává paket dál do internetu.">
-                            📡
-                        </div>
-                        <div class="node-label">Router 1</div>
-                    </div>
-
-                    <!-- Router 2 (správná cesta) -->
-                    <div class="node-slot pos2-r2">
-                        <div class="node has-tooltip node2"
-                             data-id="r2"
-                             data-name="Router 2"
-                             data-tooltip="Router 2 – další uzel v internetu (správná cesta).">
-                            📡
-                        </div>
-                        <div class="node-label">Router 2</div>
-                    </div>
-
-                    <!-- Router 3 (špatná cesta) -->
-                    <div class="node-slot pos2-r3">
-                        <div class="node has-tooltip node2"
-                             data-id="r3"
-                             data-name="Router 3"
-                             data-tooltip="Router 3 – slepá cesta, tudy se na server nedostaneš.">
-                            📡
-                        </div>
-                        <div class="node-label">Router 3</div>
-                    </div>
-
-                    <!-- Internet -->
-                    <div class="node-slot pos2-internet">
-                        <div class="node has-tooltip node2"
-                             data-id="internet"
-                             data-name="Internet"
-                             data-tooltip="„Mrak“ internetu – místo, kde se setkává mnoho sítí.">
-                            ☁️
-                        </div>
-                        <div class="node-label">Internet</div>
-                    </div>
-
-                    <!-- Server -->
-                    <div class="node-slot pos2-server">
-                        <div class="node has-tooltip node2"
-                             data-id="server"
-                             data-name="Server"
-                             data-tooltip="Server na internetu – cíl cesty paketu.">
-                            🖥️
-                        </div>
-                        <div class="node-label">Server (cíl)</div>
-                    </div>
-                </div>
-
-                <!-- Linky (vizuálně) -->
-                <div class="link2" style="top: 180px; left: 140px; width: 110px; height: 4px;"></div> <!-- start->r1 -->
-                <div class="link2" style="top: 120px; left: 250px; width: 110px; height: 4px;"></div> <!-- r1->r2 -->
-                <div class="link2 bad" style="top: 210px; left: 250px; width: 4px; height: 60px;"></div> <!-- r1->r3 (špatně) -->
-                <div class="link2" style="top: 120px; left: 470px; width: 110px; height: 4px;"></div> <!-- r2->internet -->
-                <div class="link2" style="top: 180px; left: 580px; width: 110px; height: 4px;"></div> <!-- internet->server -->
-            </div>
-        </div>
-
-        <div id="controls-task2">
-            <div id="path-preview">Zvolená cesta: (žádná)</div>
-            <button id="check-task2">Ověřit cestu</button>
-            <button id="reset-task2" class="btn-grey">Reset cesty</button>
-            <div id="message-task2"></div>
-        </div>
-    </section>
-</div>
-
-<script>
-    // --------- MISE 1: DRAG & DROP ---------
-    const devicesPanel = document.getElementById('devices-panel');
-    const devices = document.querySelectorAll('.device');
-    const nodesTask1 = document.querySelectorAll('#network-panel-task1 .node[data-role="dropzone"]');
-    const checkTask1Btn = document.getElementById('check-task1');
-    const resetTask1Btn = document.getElementById('reset-task1');
-    const nextTaskBtn = document.getElementById('next-task');
-    const messageTask1 = document.getElementById('message-task1');
-
-    let draggedElement = null;
-
-    devices.forEach(device => {
-        device.addEventListener('dragstart', (e) => {
-            draggedElement = e.target;
-            e.target.classList.add('dragging');
-        });
-
-        device.addEventListener('dragend', (e) => {
-            e.target.classList.remove('dragging');
-            draggedElement = null;
-        });
-    });
-
-    nodesTask1.forEach(node => {
-        node.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            node.classList.add('highlight');
-        });
-
-        node.addEventListener('dragleave', () => {
-            node.classList.remove('highlight');
-        });
-
-        node.addEventListener('drop', (e) => {
-            e.preventDefault();
-            node.classList.remove('highlight');
-            if (!draggedElement) return;
-
-            const existingDeviceId = node.dataset.assignedDeviceId;
-            if (existingDeviceId) {
-                const existingDevice = document.getElementById(existingDeviceId);
-                if (existingDevice) {
-                    existingDevice.style.display = 'block';
-                    devicesPanel.appendChild(existingDevice);
-                }
-            }
-
-            node.dataset.device = draggedElement.dataset.device;
-            node.dataset.assignedDeviceId = draggedElement.id;
-
-            const iconSpan = node.querySelector('.node-text');
-            const labelDiv = node.parentElement.querySelector('.node-label');
-
-            iconSpan.textContent = draggedElement.textContent.trim().charAt(0);
-            labelDiv.textContent = draggedElement.textContent.trim();
-
-            draggedElement.style.display = 'none';
-        });
-    });
-
-    checkTask1Btn.addEventListener('click', () => {
-        let allCorrect = true;
-        let allFilled = true;
-
-        nodesTask1.forEach(node => {
-            node.classList.remove('correct', 'wrong');
-            const expected = node.dataset.expected;
-            const actual = node.dataset.device;
-
-            if (!actual) {
-                allFilled = false;
-                allCorrect = false;
-                node.classList.add('wrong');
-                return;
-            }
-
-            if (actual === expected) {
-                node.classList.add('correct');
-            } else {
-                node.classList.add('wrong');
-                allCorrect = false;
-            }
-        });
-
-        if (!allFilled) {
-            messageTask1.textContent = "Ještě nejsou všechny uzly popsané. Zkus doplnit chybějící popisky.";
-            messageTask1.style.color = "#ef5350";
-        } else if (allCorrect) {
-            messageTask1.textContent = "Výborně! Všechny uzly máš správně pojmenované. Můžeš pokračovat na další misi.";
-            messageTask1.style.color = "#43a047";
-            nextTaskBtn.style.display = "inline-block";
-        } else {
-            messageTask1.textContent = "Některé uzly nejsou správně. Podívej se na červené uzly a zkus to opravit.";
-            messageTask1.style.color = "#ef5350";
-        }
-    });
-
-    resetTask1Btn.addEventListener('click', () => {
-        messageTask1.textContent = "";
-        nextTaskBtn.style.display = "none";
-
-        nodesTask1.forEach(node => {
-            node.classList.remove('correct', 'wrong', 'highlight');
-            delete node.dataset.device;
-            delete node.dataset.assignedDeviceId;
-
-            const iconSpan = node.querySelector('.node-text');
-            const labelDiv = node.parentElement.querySelector('.node-label');
-
-            iconSpan.textContent = "?";
-            labelDiv.textContent = "?";
-        });
-
-        document.querySelectorAll('.device').forEach(device => {
-            device.style.display = 'block';
-            devicesPanel.appendChild(device);
-        });
-    });
-
-    nextTaskBtn.addEventListener('click', () => {
-        document.getElementById('task1').style.display = 'none';
-        document.getElementById('task2').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // --------- MISE 2: CESTA PAKETU ---------
-    const nodesTask2 = document.querySelectorAll('.node2');
-    const checkTask2Btn = document.getElementById('check-task2');
-    const resetTask2Btn = document.getElementById('reset-task2');
-    const messageTask2 = document.getElementById('message-task2');
-    const pathPreview = document.getElementById('path-preview');
-
-    const correctPath = ['start', 'r1', 'r2', 'internet', 'server'];
-    let selectedPath = [];
-
-    function updatePathPreview() {
-        if (selectedPath.length === 0) {
-            pathPreview.textContent = "Zvolená cesta: (žádná)";
-            return;
-        }
-        const names = selectedPath.map(id => {
-            const node = document.querySelector('.node2[data-id="' + id + '"]');
-            return node ? node.dataset.name : id;
-        });
-        pathPreview.textContent = "Zvolená cesta: " + names.join(" → ");
+<meta charset="UTF-8">
+<title>Balíček přes město</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        margin: 0;
+        padding: 20px;
+    }
+    h1 { text-align: center; }
+
+    .map {
+        width: 80%;
+        max-width: 700px;
+        margin: 30px auto;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(3, 120px);
+        gap: 20px;
+        position: relative; /* kvůli balíčku */
+        background: #e0f2f1;
+        border-radius: 10px;
+        padding: 10px;
+        box-sizing: border-box;
     }
 
-    nodesTask2.forEach(node => {
-        node.addEventListener('click', () => {
-            const id = node.dataset.id;
+    .node {
+        background: #fff;
+        border: 2px solid #bdbdbd;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        text-align: center;
+        padding: 10px;
+        transition: 0.2s;
+        font-size: 18px;
+        font-weight: bold;
+        z-index: 1; /* nad mapovým podkladem */
+    }
 
-            if (selectedPath.length === 0 && id !== 'start') {
-                messageTask2.textContent = "Začni kliknutím na Počítač (start).";
-                messageTask2.style.color = "#ef5350";
+    .node:hover {
+        background: #e3f2fd;
+    }
+
+    .node.selected {
+        background: #fff8e1;
+        border-color: #ffb300;
+    }
+
+    .node.correct {
+        background: #e8f5e9;
+        border-color: #43a047;
+    }
+
+    .node.wrong {
+        background: #ffebee;
+        border-color: #e53935;
+    }
+
+    #info {
+        text-align: center;
+        font-size: 18px;
+        margin-top: 20px;
+        min-height: 32px;
+    }
+
+    #path {
+        text-align: center;
+        font-size: 14px;
+        margin-top: 5px;
+        color: #616161;
+    }
+
+    #reset {
+        display: block;
+        margin: 20px auto;
+        padding: 8px 16px;
+        font-size: 16px;
+        border: none;
+        background: #9e9e9e;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    #reset:hover {
+        background: #757575;
+    }
+
+    /* Balíček – animovaný prvek */
+    #package {
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        pointer-events: none;
+        transition: left 0.6s linear, top 0.6s linear;
+        z-index: 2; /* nad uzly */
+    }
+</style>
+</head>
+
+<body>
+<h1>Balíček přes město</h1>
+<p style="text-align:center;">
+    Klikni na jednotlivé zastávky, aby balíček došel z domu až na server.
+</p>
+
+<div class="map" id="map">
+    <!-- animovaný balíček -->
+    <div id="package">📦</div>
+
+    <!-- uzly -->
+    <div class="node" data-id="pc"      style="grid-column:1; grid-row:1;">🏠 Dům</div>
+    <div class="node" data-id="switch"  style="grid-column:2; grid-row:1;">📮 Pobočka</div>
+    <div class="node" data-id="router"  style="grid-column:3; grid-row:1;">🏢 Hlavní pošta</div>
+    <div class="node" data-id="internet"style="grid-column:4; grid-row:2;">✈️ Letiště</div>
+    <div class="node" data-id="server"  style="grid-column:5; grid-row:3;">💻 Server</div>
+</div>
+
+<div id="info"></div>
+<div id="path">(zatím žádná cesta)</div>
+
+<button id="reset">Reset</button>
+
+<script>
+const correctPath = ["pc","switch","router","internet","server"];
+let selected = [];
+let finished = false;  // aby po úspěchu nelezli do animace klikáním
+
+const info = document.getElementById("info");
+const path = document.getElementById("path");
+const mapEl = document.getElementById("map");
+const packageEl = document.getElementById("package");
+const nodes = document.querySelectorAll(".node");
+
+function updatePath() {
+    if (selected.length === 0) {
+        path.textContent = "(zatím žádná cesta)";
+        return;
+    }
+    const names = {
+        pc:"Dům",
+        switch:"Pobočka",
+        router:"Hlavní pošta",
+        internet:"Letiště",
+        server:"Server"
+    };
+    path.textContent = "Cesta: " + selected.map(id => names[id]).join(" → ");
+}
+
+// spočítá střed uzlu v souřadnicích relativně k .map
+function getNodeCenter(node) {
+    const nodeRect = node.getBoundingClientRect();
+    const mapRect = mapEl.getBoundingClientRect();
+    return {
+        x: nodeRect.left - mapRect.left + nodeRect.width / 2,
+        y: nodeRect.top - mapRect.top + nodeRect.height / 2
+    };
+}
+
+// animace balíčku po správné cestě
+function animatePackage() {
+    const nodesOnPath = correctPath.map(id =>
+        document.querySelector('.node[data-id="'+id+'"]')
+    );
+    const coords = nodesOnPath.map(getNodeCenter);
+
+    if (coords.length === 0) return;
+
+    // připravíme balíček
+    const size = 32;
+    packageEl.style.display = "flex";
+    packageEl.style.left = (coords[0].x - size/2) + "px";
+    packageEl.style.top  = (coords[0].y - size/2) + "px";
+
+    let i = 1;
+    function step() {
+        if (i >= coords.length) return;
+        packageEl.style.left = (coords[i].x - size/2) + "px";
+        packageEl.style.top  = (coords[i].y - size/2) + "px";
+        i++;
+        if (i < coords.length) {
+            setTimeout(step, 700); // čekej, než doběhne transition
+        }
+    }
+
+    // malá prodleva, aby bylo vidět „start“
+    setTimeout(step, 300);
+}
+
+nodes.forEach(node => {
+    node.addEventListener("click", () => {
+        if (finished) return;  // po dokončení už nekazit animaci
+
+        const id = node.dataset.id;
+
+        if (selected.includes(id)) return;  // už je ve zvolené cestě
+        selected.push(id);
+
+        node.classList.add("selected");
+        updatePath();
+
+        // průběžná kontrola správnosti prefixu
+        for (let i = 0; i < selected.length; i++) {
+            if (selected[i] !== correctPath[i]) {
+                info.textContent = "Balíček zabloudil! Tady tahle zastávka je špatně.";
+                info.style.color = "#e53935";
+
+                selected.forEach(s => {
+                    document.querySelector('[data-id="'+s+'"]')
+                        .classList.add("wrong");
+                });
+                finished = true;  // hra pro tuto rundu skončila
                 return;
             }
-
-            if (selectedPath.includes(id)) {
-                return;
-            }
-
-            selectedPath.push(id);
-            node.classList.add('selected');
-            messageTask2.textContent = "";
-            updatePathPreview();
-        });
-    });
-
-    checkTask2Btn.addEventListener('click', () => {
-        nodesTask2.forEach(node => {
-            node.classList.remove('correct-path', 'wrong-path');
-        });
-
-        if (selectedPath.length !== correctPath.length) {
-            messageTask2.textContent = "Vybral(a) jsi " + selectedPath.length +
-                " uzlů. Potřebuješ přesně " + correctPath.length + " kroků (včetně startu a cíle).";
-            messageTask2.style.color = "#ef5350";
-            selectedPath.forEach(id => {
-                const node = document.querySelector('.node2[data-id="' + id + '"]');
-                if (node) node.classList.add('wrong-path');
-            });
-            return;
         }
 
-        let allMatch = true;
-        for (let i = 0; i < correctPath.length; i++) {
-            if (selectedPath[i] !== correctPath[i]) {
-                allMatch = false;
-                break;
-            }
-        }
+        // jestli máme celou správnou cestu
+        if (selected.length === correctPath.length) {
+            info.textContent = "Skvělé! Balíček dorazil na server – podívej, jak jede.";
+            info.style.color = "#43a047";
 
-        if (allMatch) {
-            selectedPath.forEach(id => {
-                const node = document.querySelector('.node2[data-id="' + id + '"]');
-                if (node) node.classList.add('correct-path');
+            correctPath.forEach(s => {
+                document.querySelector('[data-id="'+s+'"]')
+                    .classList.add("correct");
             });
-            messageTask2.textContent = "Skvělé! Takto putuje paket z tvého počítače přes routery až na server.";
-            messageTask2.style.color = "#43a047";
-        } else {
-            selectedPath.forEach(id => {
-                const node = document.querySelector('.node2[data-id="' + id + '"]');
-                if (node) node.classList.add('wrong-path');
-            });
-            messageTask2.textContent = "Tahle cesta není správná. Zkus to znovu – podívej se na linky a tooltipy.";
-            messageTask2.style.color = "#ef5350";
+
+            finished = true;
+            animatePackage();
         }
     });
+});
 
-    resetTask2Btn.addEventListener('click', () => {
-        selectedPath = [];
-        nodesTask2.forEach(node => {
-            node.classList.remove('selected', 'correct-path', 'wrong-path');
-        });
-        messageTask2.textContent = "";
-        updatePathPreview();
+document.getElementById("reset").addEventListener("click", () => {
+    selected = [];
+    finished = false;
+    info.textContent = "";
+    updatePath();
+
+    nodes.forEach(n => {
+        n.classList.remove("selected","correct","wrong");
     });
 
-    updatePathPreview();
+    packageEl.style.display = "none";
+});
 </script>
+
 </body>
 </html>
