@@ -83,7 +83,7 @@
         }
 
         .node-text {
-            font-size: 26px;
+            font-size: 24px;
             pointer-events: none;
         }
 
@@ -142,38 +142,6 @@
             z-index: 9;
         }
 
-        /* Linky v síti – čistě dekorativní */
-        .link {
-            position: absolute;
-            background: #9e9e9e;
-        }
-
-        /* Konkrétní pozice pro úkol 1 */
-        .pos-pc-left {
-            grid-column: 1;
-            grid-row: 2;
-        }
-
-        .pos-pc-bottom {
-            grid-column: 2;
-            grid-row: 3;
-        }
-
-        .pos-switch {
-            grid-column: 3;
-            grid-row: 2;
-        }
-
-        .pos-router {
-            grid-column: 5;
-            grid-row: 2;
-        }
-
-        .pos-cloud {
-            grid-column: 4;
-            grid-row: 1;
-        }
-
         /* Panel s kartičkami */
         #devices-panel {
             flex: 1 1 250px;
@@ -207,7 +175,7 @@
             margin-right: 4px;
         }
 
-        .device[data-device="client"]::before {
+        .device[data-device^="client"]::before {
             content: "💻 ";
         }
 
@@ -266,6 +234,32 @@
             min-height: 24px;
         }
 
+        /* Pozice pro misi 1 */
+        .pos1-pc1 {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .pos1-pc2 {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .pos1-switch {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .pos1-router {
+            grid-column: 4;
+            grid-row: 2;
+        }
+
+        .pos1-internet {
+            grid-column: 5;
+            grid-row: 1;
+        }
+
         /* Úkol 2 – pozice */
         .pos2-pc {
             grid-column: 1;
@@ -297,7 +291,6 @@
             grid-row: 2;
         }
 
-        /* Stav vybrané cesty */
         .node.correct-path {
             border-color: #66bb6a;
             background: #e8f5e9;
@@ -313,59 +306,42 @@
 <div id="container">
     <h1>Učím se počítačové sítě</h1>
 
-    <!-- ÚKOL 1: přiřaď, co je který uzel v síti -->
+    <!-- ÚKOL 1 -->
     <section id="task1" class="card">
         <h2>Úkol 1 – Rozpoznej zařízení v lokální síti</h2>
         <p>
-            Podívej se na schéma sítě. Přetáhni popisky zařízení na uzly tak,
-            jak si myslíš, že síť funguje. Najedeš-li na uzel myší, zobrazí se nápověda.
+            V této síti jsou dva počítače, jeden switch, jeden router a internetový „mrak“.
+            Přetáhni popisky na správné uzly. Najedeš-li na uzel myší, zobrazí se nápověda.
         </p>
-        <ul>
-            <li>Počítače jsou na okrajích sítě (koncová zařízení).</li>
-            <li>Uprostřed je přepínač (switch) – spojuje více počítačů.</li>
-            <li>Router (směrovač) připojuje naši síť k internetu.</li>
-            <li>Internet je „mrak“ mimo naši lokální síť.</li>
-        </ul>
 
         <div id="main-task1">
-            <!-- Panel s obrázkem sítě -->
+            <!-- Obrázek sítě (bez linek, jen uzly) -->
             <div id="network-panel-task1" class="network-panel">
                 <div class="network-grid">
-                    <!-- Internet cloud -->
-                    <div class="node-slot pos-cloud">
+                    <!-- Počítač 1 -->
+                    <div class="node-slot pos1-pc1">
                         <div class="node has-tooltip"
-                             data-expected="internet"
+                             data-expected="client1"
                              data-role="dropzone"
-                             data-tooltip="Internet – obrovská síť dalších sítí, mimo naši místnost.">
+                             data-tooltip="Počítač žáka – koncové zařízení číslo 1.">
                             <span class="node-text">?</span>
                         </div>
                         <div class="node-label">?</div>
                     </div>
 
-                    <!-- Levý PC -->
-                    <div class="node-slot pos-pc-left">
+                    <!-- Počítač 2 -->
+                    <div class="node-slot pos1-pc2">
                         <div class="node has-tooltip"
-                             data-expected="client"
+                             data-expected="client2"
                              data-role="dropzone"
-                             data-tooltip="Koncové zařízení: počítač, notebook nebo mobil žáka.">
-                            <span class="node-text">?</span>
-                        </div>
-                        <div class="node-label">?</div>
-                    </div>
-
-                    <!-- Spodní PC -->
-                    <div class="node-slot pos-pc-bottom">
-                        <div class="node has-tooltip"
-                             data-expected="client"
-                             data-role="dropzone"
-                             data-tooltip="Další koncové zařízení v učebně.">
+                             data-tooltip="Další počítač v učebně – koncové zařízení číslo 2.">
                             <span class="node-text">?</span>
                         </div>
                         <div class="node-label">?</div>
                     </div>
 
                     <!-- Switch -->
-                    <div class="node-slot pos-switch">
+                    <div class="node-slot pos1-switch">
                         <div class="node has-tooltip"
                              data-expected="switch"
                              data-role="dropzone"
@@ -376,31 +352,37 @@
                     </div>
 
                     <!-- Router -->
-                    <div class="node-slot pos-router">
+                    <div class="node-slot pos1-router">
                         <div class="node has-tooltip"
                              data-expected="router"
                              data-role="dropzone"
-                             data-tooltip="Router (směrovač) spojuje naši síť s internetem.">
+                             data-tooltip="Router (směrovač) spojuje naši lokální síť s internetem.">
+                            <span class="node-text">?</span>
+                        </div>
+                        <div class="node-label">?</div>
+                    </div>
+
+                    <!-- Internet -->
+                    <div class="node-slot pos1-internet">
+                        <div class="node has-tooltip"
+                             data-expected="internet"
+                             data-role="dropzone"
+                             data-tooltip="Internet – obrovská síť dalších sítí mimo naši místnost.">
                             <span class="node-text">?</span>
                         </div>
                         <div class="node-label">?</div>
                     </div>
                 </div>
-
-                <!-- Dekorativní linky -->
-                <div class="link" style="top: 180px; left: 140px; width: 210px; height: 4px;"></div>
-                <div class="link" style="top: 260px; left: 200px; width: 4px; height: 60px;"></div>
-                <div class="link" style="top: 180px; left: 540px; width: 200px; height: 4px;"></div>
-                <div class="link" style="top: 120px; left: 690px; width: 4px; height: 60px;"></div>
             </div>
 
-            <!-- Panel s popisky zařízení -->
+            <!-- Popisky zařízení -->
             <div id="devices-panel">
                 <h2>Popisky zařízení</h2>
                 <p>Přetáhni na správné uzly v síti:</p>
-                <div class="device" draggable="true" data-device="client" id="dev-client">Počítač</div>
-                <div class="device" draggable="true" data-device="switch" id="dev-switch">Switch (přepínač)</div>
-                <div class="device" draggable="true" data-device="router" id="dev-router">Router</div>
+                <div class="device" draggable="true" data-device="client1" id="dev-client1">Počítač 1</div>
+                <div class="device" draggable="true" data-device="client2" id="dev-client2">Počítač 2</div>
+                <div class="device" draggable="true" data-device="switch"  id="dev-switch">Switch (přepínač)</div>
+                <div class="device" draggable="true" data-device="router"  id="dev-router">Router</div>
                 <div class="device" draggable="true" data-device="internet" id="dev-internet">Internet</div>
             </div>
         </div>
@@ -413,7 +395,7 @@
         </div>
     </section>
 
-    <!-- ÚKOL 2: průchod internetem -->
+    <!-- ÚKOL 2 – cesta paketu -->
     <section id="task2" class="card" style="display:none;">
         <h2>Úkol 2 – Najdi cestu, kterou putuje paket</h2>
         <p>
@@ -423,7 +405,7 @@
         <ul>
             <li>Začni na počítači (start).</li>
             <li>Pak klikni na další uzly ve správném pořadí.</li>
-            <li>Počet uzlů je uveden dole (např. 5 kroků).</li>
+            <li>Potřebuješ přesně <strong>5 kroků</strong> (včetně startu a cíle).</li>
         </ul>
 
         <div id="main-task2">
@@ -490,22 +472,16 @@
                     </div>
                 </div>
 
-                <!-- Dekorativní linky (cesty) -->
-                <!-- start -> r1 -->
+                <!-- Dekorativní linky (pro misi 2 linky nechávám) -->
                 <div class="link" style="top: 180px; left: 140px; width: 110px; height: 4px;"></div>
-                <!-- r1 -> r2 -->
                 <div class="link" style="top: 120px; left: 250px; width: 110px; height: 4px;"></div>
-                <!-- r1 -> r3 (špatná cesta dolů) -->
                 <div class="link" style="top: 210px; left: 250px; width: 4px; height: 60px; background:#ef5350;"></div>
-                <!-- r2 -> internet -->
                 <div class="link" style="top: 120px; left: 470px; width: 110px; height: 4px;"></div>
-                <!-- internet -> server -->
                 <div class="link" style="top: 180px; left: 580px; width: 110px; height: 4px;"></div>
             </div>
         </div>
 
         <div id="controls-task2">
-            <p>Vyber přesně <strong>5 uzlů</strong> v pořadí (od počítače k serveru) a pak klikni na „Ověřit cestu“.</p>
             <button id="check-task2">Ověřit cestu</button>
             <button id="reset-task2" class="btn-grey">Reset cesty</button>
             <div id="message-task2"></div>
@@ -514,7 +490,7 @@
 </div>
 
 <script>
-    // ---------------- ÚKOL 1: DRAG & DROP POPISKŮ ----------------
+    // --------- ÚKOL 1: DRAG & DROP ---------
     const devicesPanel = document.getElementById('devices-panel');
     const devices = document.querySelectorAll('.device');
     const nodesTask1 = document.querySelectorAll('#network-panel-task1 .node[data-role="dropzone"]');
@@ -552,7 +528,6 @@
             node.classList.remove('highlight');
             if (!draggedElement) return;
 
-            // vrátíme případný předchozí popisek
             const existingDeviceId = node.dataset.assignedDeviceId;
             if (existingDeviceId) {
                 const existingDevice = document.getElementById(existingDeviceId);
@@ -568,7 +543,7 @@
             const iconSpan = node.querySelector('.node-text');
             const labelDiv = node.parentElement.querySelector('.node-label');
 
-            iconSpan.textContent = draggedElement.textContent.trim().charAt(0); // jen první písmeno
+            iconSpan.textContent = draggedElement.textContent.trim().charAt(0);
             labelDiv.textContent = draggedElement.textContent.trim();
 
             draggedElement.style.display = 'none';
@@ -634,14 +609,13 @@
         });
     });
 
-    // přechod na úkol 2
     nextTaskBtn.addEventListener('click', () => {
         document.getElementById('task1').style.display = 'none';
         document.getElementById('task2').style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // ---------------- ÚKOL 2: CESTA PAKETU ----------------
+    // --------- ÚKOL 2: CESTA PAKETU ---------
     const nodesTask2 = document.querySelectorAll('.node2');
     const checkTask2Btn = document.getElementById('check-task2');
     const resetTask2Btn = document.getElementById('reset-task2');
@@ -653,19 +627,15 @@
     nodesTask2.forEach(node => {
         node.addEventListener('click', () => {
             const id = node.dataset.id;
-
-            // Pokud už je vybraný, uděláme jednoduché pravidlo: ignorovat klik
             if (selectedPath.includes(id)) {
                 return;
             }
-
             selectedPath.push(id);
             node.classList.add('selected');
         });
     });
 
     checkTask2Btn.addEventListener('click', () => {
-        // reset vizuálních stavů
         nodesTask2.forEach(node => {
             node.classList.remove('correct-path', 'wrong-path');
         });
@@ -674,7 +644,6 @@
             messageTask2.textContent = "Vybral(a) jsi " + selectedPath.length +
                 " uzlů. Potřebuješ přesně " + correctPath.length + " kroků (včetně startu a cíle).";
             messageTask2.style.color = "#ef5350";
-            // označíme vybranou cestu jako špatnou
             selectedPath.forEach(id => {
                 const node = document.querySelector('.node2[data-id="' + id + '"]');
                 if (node) node.classList.add('wrong-path');
