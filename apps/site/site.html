@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Postav si síť – Drag & Drop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        #intro {
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        #play-area {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Levý panel – zařízení */
+        #devices {
+            flex: 1 1 250px;
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            min-height: 220px;
+        }
+
+        #devices h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .device {
+            padding: 8px 10px;
+            margin: 5px 0;
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            cursor: grab;
+            text-align: center;
+        }
+
+        .device.dragging {
+            opacity: 0.5;
+        }
+
+        /* Pravý panel – schéma sítě */
+        #slots {
+            flex: 2 1 350px;
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        #slots h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .slot-row {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            gap: 10px;
+        }
+
+        .slot-label {
+            width: 160px;
+            font-weight: bold;
+        }
+
+        .slot {
+            flex: 1;
+            min-height: 40px;
+            border: 2px dashed #bdbdbd;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+        }
+
+        .slot.highlight {
+            border-color: #42a5f5;
+            background: #e3f2fd;
+        }
+
+        .slot.correct {
+            border-
