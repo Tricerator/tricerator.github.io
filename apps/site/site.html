@@ -34,7 +34,6 @@
             flex-wrap: wrap;
         }
 
-        /* Síťové panely */
         .network-panel {
             flex: 2 1 500px;
             padding: 15px;
@@ -50,12 +49,21 @@
             margin-bottom: 10px;
         }
 
-        /* MISE 1 – obrázek sítě (absolutní rozložení, jasné linky) */
+        /* --- MISE 1: „plátno“ sítě --- */
         .network-diagram {
             position: relative;
             width: 600px;
-            height: 220px;
+            height: 240px;
             margin: 0 auto;
+        }
+
+        .network-diagram svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 600px;
+            height: 240px;
+            pointer-events: none; /* aby nepřekáželo drag & dropu */
         }
 
         .node-slot-abs {
@@ -139,13 +147,6 @@
             z-index: 9;
         }
 
-        /* Linky mezi uzly v misi 1 */
-        .link {
-            position: absolute;
-            background: #9e9e9e;
-            z-index: 0;
-        }
-
         /* Panel s kartičkami */
         #devices-panel {
             flex: 1 1 250px;
@@ -195,7 +196,7 @@
             content: "☁️ ";
         }
 
-        /* Tlačítka a zprávy */
+        /* --- Tlačítka a zprávy --- */
         #controls-task1, #controls-task2 {
             margin-top: 20px;
             text-align: center;
@@ -238,7 +239,7 @@
             min-height: 24px;
         }
 
-        /* MISE 2 – klikací uzly (grid) */
+        /* --- MISE 2: grid + klikání --- */
         .network-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -282,7 +283,6 @@
             background: #ffebee;
         }
 
-        /* Linky v misi 2 */
         .link2 {
             position: absolute;
             background: #9e9e9e;
@@ -314,12 +314,26 @@
         </p>
 
         <div id="main-task1">
+            <!-- Obrázek sítě: PC1 + PC2 → Switch → Router → Internet -->
             <div id="network-panel-task1" class="network-panel">
                 <h2>Obrázek sítě</h2>
                 <div class="network-diagram">
-                    <!-- Uzly – absolutní pozice, aby linky byly čitelné -->
-                    <!-- Počítač 1 -->
-                    <div class="node-slot-abs" style="left: 40px; top: 40px;">
+                    <!-- Spoje kreslíme pomocí SVG, uzly jsou nad tím -->
+                    <svg viewBox="0 0 600 240">
+                        <!-- PC1 (70,70) -> Switch (300,70) -->
+                        <line x1="105" y1="70" x2="265" y2="70" stroke="#9e9e9e" stroke-width="4" />
+                        <!-- Switch (300,70) -> Router (530,70) -->
+                        <line x1="335" y1="70" x2="495" y2="70" stroke="#9e9e9e" stroke-width="4" />
+                        <!-- Router (530,70) -> Internet (530,190) -->
+                        <line x1="530" y1="105" x2="530" y2="155" stroke="#9e9e9e" stroke-width="4" />
+                        <!-- PC2 (70,190) -> spoj na y=120 -> Switch -->
+                        <line x1="70" y1="190" x2="70" y2="120" stroke="#9e9e9e" stroke-width="4" />
+                        <line x1="70" y1="120" x2="265" y2="120" stroke="#9e9e9e" stroke-width="4" />
+                    </svg>
+
+                    <!-- Uzly (kolečká) – top/left zhruba podle souřadnic výše -->
+                    <!-- Počítač 1 (center 70,70) -->
+                    <div class="node-slot-abs" style="left:35px; top:35px;">
                         <div class="node has-tooltip"
                              data-expected="client1"
                              data-role="dropzone"
@@ -329,8 +343,8 @@
                         <div class="node-label">?</div>
                     </div>
 
-                    <!-- Switch -->
-                    <div class="node-slot-abs" style="left: 250px; top: 40px;">
+                    <!-- Switch (center 300,70) -->
+                    <div class="node-slot-abs" style="left:265px; top:35px;">
                         <div class="node has-tooltip"
                              data-expected="switch"
                              data-role="dropzone"
@@ -340,8 +354,8 @@
                         <div class="node-label">?</div>
                     </div>
 
-                    <!-- Router -->
-                    <div class="node-slot-abs" style="left: 460px; top: 40px;">
+                    <!-- Router (center 530,70) -->
+                    <div class="node-slot-abs" style="left:495px; top:35px;">
                         <div class="node has-tooltip"
                              data-expected="router"
                              data-role="dropzone"
@@ -351,8 +365,8 @@
                         <div class="node-label">?</div>
                     </div>
 
-                    <!-- Počítač 2 -->
-                    <div class="node-slot-abs" style="left: 40px; top: 140px;">
+                    <!-- Počítač 2 (center 70,190) -->
+                    <div class="node-slot-abs" style="left:35px; top:155px;">
                         <div class="node has-tooltip"
                              data-expected="client2"
                              data-role="dropzone"
@@ -362,8 +376,8 @@
                         <div class="node-label">?</div>
                     </div>
 
-                    <!-- Internet -->
-                    <div class="node-slot-abs" style="left: 460px; top: 140px;">
+                    <!-- Internet (center 530,190) -->
+                    <div class="node-slot-abs" style="left:495px; top:155px;">
                         <div class="node has-tooltip"
                              data-expected="internet"
                              data-role="dropzone"
@@ -372,17 +386,6 @@
                         </div>
                         <div class="node-label">?</div>
                     </div>
-
-                    <!-- Linky (jen vizuálně – PC1–Switch–Router–Internet, PC2–Switch) -->
-                    <!-- PC1 -> Switch -->
-                    <div class="link" style="top: 75px; left: 110px; width: 140px; height: 4px;"></div>
-                    <!-- Switch -> Router -->
-                    <div class="link" style="top: 75px; left: 320px; width: 140px; height: 4px;"></div>
-                    <!-- Router -> Internet (dolů) -->
-                    <div class="link" style="top: 110px; left: 495px; width: 4px; height: 60px;"></div>
-                    <!-- PC2 -> Switch (nahoru a doprava) -->
-                    <div class="link" style="top: 175px; left: 75px; width: 4px; height: 40px;"></div>
-                    <div class="link" style="top: 135px; left: 75px; width: 210px; height: 4px;"></div>
                 </div>
             </div>
 
@@ -662,7 +665,6 @@
         node.addEventListener('click', () => {
             const id = node.dataset.id;
 
-            // První klik MUSÍ být start
             if (selectedPath.length === 0 && id !== 'start') {
                 messageTask2.textContent = "Začni kliknutím na Počítač (start).";
                 messageTask2.style.color = "#ef5350";
