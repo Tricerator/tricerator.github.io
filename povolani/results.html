@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Životní cesta – výsledky třídy</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fffdf8;--ink:#1d1b18;--muted:#5d584f;--line:#d9d3c6;--accent:#2f5d50;--accent-ink:#fff;--minus:#a3311f;--soft:#ebe6da}
+@media (prefers-color-scheme: dark){:root{--bg:#16181a;--card:#1f2225;--ink:#ece8df;--muted:#a8a296;--line:#34383c;--accent:#7fbfa9;--accent-ink:#10201b;--minus:#f08a76;--soft:#272b2f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.5}
+main{max-width:980px;margin:0 auto;padding:24px 16px 60px}
+h1,h2{font-family:Georgia,serif;line-height:1.2} h1{font-size:32px;margin:0 0 8px} h2{font-size:22px;margin:28px 0 10px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.tile small{display:block;color:var(--muted);font-size:13px}
+.tile b{font-size:28px;font-variant-numeric:tabular-nums}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+th{cursor:pointer;color:var(--muted);font-weight:600}
+td.neg{color:var(--minus);font-weight:600}
+.bar{display:flex;align-items:center;gap:8px}
+.bar i{display:block;height:10px;background:var(--accent);border-radius:5px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+button,input[type=text]{font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 12px;min-height:44px}
+button{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);cursor:pointer;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.note{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Životní cesta – výsledky třídy</h1>
+<p class="note">Data se načtou z Google Tabulky (publikované jako CSV), nebo z CSV souboru staženého z Tabulky. Nic se nikam neodesílá.</p>
+
+<div class="box">
+  <div class="row">
+    <input type="text" id="url" placeholder="Odkaz na tabulku publikovanou jako CSV" style="flex:1 1 320px">
+    <button id="load">Načíst</button>
+    <label class="note">nebo soubor: <input type="file" id="file" accept=".csv,text/csv"></label>
+  </div>
+  <p id="msg" class="note" aria-live="polite"></p>
+</div>
+
+<div id="out"></div>
+</main>
+<script>
+// Sem můžeš natrvalo vložit odkaz na publikované CSV (Soubor → Sdílet → Publikovat na webu → CSV)
+const CSV_URL = "";
+
+const $=s=>document.querySelector(s);
+const ENDINGS={both:"Dobrá rovnováha",rich:"Bohatý, ale unavený",happy:"Šťastný, tenká peněženka",hard:"Těžká cesta"};
+const FAMILY={none:"bez partnera",partner:"s partnerem",married:"v manželství",divorced:"po rozvodu"};
+
+function parseCSV(text){
+  const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=""; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=""; }
+    else f+=c;
+  }
+  if(f!==""||row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r=>r.some(x=>x.trim()!==""));
+}
+function toPlayers(rows){
+  if(rows.length<2) return [];
+  const head=rows[0], body=rows.slice(1);
+  const dataCol=head.findIndex((_,i)=>body.some(r=>(r[i]||"").includes("povolani=")));
+  if(dataCol<0) throw new Error("V tabulce není sloupec s výsledky (hledám text „povolani=“).");
+  const others=head.map((_,i)=>i).filter(i=>i!==dataCol);
+  const nickCol=others.length>1?others[others.length-1]:others[0];
+  const timeCol=others.length>1?others[0]:-1;
+  return body.filter(r=>r[dataCol]).map(r=>{
+    const d={}; r[dataCol].split(";").forEach(p=>{ const k=p.indexOf("="); if(k>0) d[p.slice(0,k).trim()]=p.slice(k+1).trim(); });
+    ["penize","spokojenost","kol_v_minusu","preplaceno","nejnizsi","prescasy","dovolene","zmeny","deti","oddluzeni"].forEach(k=>d[k]=+d[k]||0);
+    d.nick=r[nickCol]||"?"; d.time=timeCol>=0?r[timeCol]:""; return d;
+  });
+}
+const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length):0;
+const f1=n=>n.toFixed(1).replace(".",",");
+function countBy(arr,fn){ const m={}; arr.forEach(x=>{const k=fn(x); m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]); }
+function bars(entries,total){ const max=Math.max(...entries.map(e=>e[1]),1);
+  return `<table>${entries.map(([k,v])=>`<tr><td>${k}</td><td style="width:55%"><span class="bar"><i style="width:${v/max*100}%"></i>${v}</span></td></tr>`).join("")}</table>`; }
+let P=[], sortKey="penize", sortDir=-1;
+function show(){
+  if(!P.length){ $("#out").innerHTML=`<p>Zatím žádné výsledky.</p>`; return; }
+  const n=P.length;
+  const endNeg=P.filter(p=>p.penize<0).length, everNeg=P.filter(p=>p.kol_v_minusu>0).length;
+  const byPath=["VL","M","VŠ"].map(c=>{const g=P.filter(p=>p.cesta===c); return [c,g];}).filter(x=>x[1].length);
+  const pathName={VL:"Učební obor",M:"Maturita","VŠ":"Vysoká škola"};
+  const cols=[["nick","Přezdívka"],["cesta","Cesta"],["prvni","První povolání"],["povolani","Konečné povolání"],["titul","Titul"],["penize","Peníze"],["spokojenost","Spokojenost"],["kol_v_minusu","Kol v mínusu"],["preplaceno","Přeplaceno"],["zmeny","Změny"],["rodina","Rodina"],["deti","Děti"],["konec","Konec"]];
+  const sorted=[...P].sort((a,b)=>{const x=a[sortKey],y=b[sortKey]; return (typeof x==="number"?x-y:String(x).localeCompare(String(y),"cs"))*sortDir;});
+  $("#out").innerHTML=`
+  <h2>Přehled</h2>
+  <div class="tiles">
+    <div class="tile"><small>Odehraných her</small><b>${n}</b></div>
+    <div class="tile"><small>Průměr peněz</small><b>${f1(avg(P.map(p=>p.penize)))}</b></div>
+    <div class="tile"><small>Průměr spokojenosti</small><b>${f1(avg(P.map(p=>p.spokojenost)))}</b></div>
+    <div class="tile"><small>Skončilo v mínusu</small><b>${endNeg}</b> <span class="note">z ${n}</span></div>
+    <div class="tile"><small>Někdy v mínusu</small><b>${everNeg}</b> <span class="note">z ${n}</span></div>
+    <div class="tile"><small>Prošlo oddlužením</small><b>${P.filter(p=>p.oddluzeni>0).length}</b> <span class="note">z ${n}</span></div>
+    <div class="tile"><small>Změnilo povolání</small><b>${P.filter(p=>p.zmeny>0).length}</b> <span class="note">z ${n}</span></div>
+  </div>
+  <h2>Podle typu školy</h2>
+  <div class="box wrap"><table><thead><tr><th>Cesta</th><th>Hráčů</th><th>Průměr peněz</th><th>Průměr spokojenosti</th><th>Někdy v mínusu</th></tr></thead><tbody>
+    ${byPath.map(([c,g])=>`<tr><td>${pathName[c]}</td><td>${g.length}</td><td>${f1(avg(g.map(p=>p.penize)))}</td><td>${f1(avg(g.map(p=>p.spokojenost)))}</td><td>${g.filter(p=>p.kol_v_minusu>0).length}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="cols">
+    <div class="box"><h2 style="margin-top:0">Jak to skončilo</h2>${bars(countBy(P,p=>ENDINGS[p.konec]||p.konec),n)}</div>
+    <div class="box"><h2 style="margin-top:0">První volba povolání</h2>${bars(countBy(P,p=>p.prvni),n)}</div>
+    <div class="box"><h2 style="margin-top:0">Rodina na konci</h2>${bars(countBy(P,p=>FAMILY[p.rodina]||p.rodina),n)}</div>
+  </div>
+  <h2>Všichni hráči</h2>
+  <p class="note">Kliknutím na záhlaví seřadíš.</p>
+  <div class="box wrap"><table><thead><tr>${cols.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>
+    ${sorted.map(p=>`<tr>${cols.map(([k])=>{ let v=p[k]; if(k==="konec") v=ENDINGS[v]||v; if(k==="rodina") v=FAMILY[v]||v;
+      const neg=(k==="penize"&&p.penize<0); return `<td class="${neg?"neg":""}">${v===undefined?"":String(v).replace(/</g,"&lt;")}</td>`;}).join("")}</tr>`).join("")}
+  </tbody></table></div>`;
+  document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{ const k=th.dataset.k; if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=-1;} show(); });
+}
+function load(text){
+  try{ P=toPlayers(parseCSV(text)); $("#msg").textContent=`Načteno ${P.length} výsledků.`; show(); }
+  catch(e){ $("#msg").textContent=e.message; }
+}
+async function loadUrl(u){
+  $("#msg").textContent="Načítám…";
+  try{ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error(r.status); load(await r.text()); }
+  catch(e){ $("#msg").textContent="Tabulku se nepodařilo načíst. Zkontroluj, že je publikovaná jako CSV, nebo nahraj stažený CSV soubor."; }
+}
+$("#load").onclick=()=>{ const u=$("#url").value.trim(); if(u) loadUrl(u); };
+$("#file").onchange=e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>load(rd.result); rd.readAsText(f,"utf-8"); };
+if(CSV_URL){ $("#url").value=CSV_URL; loadUrl(CSV_URL); }
+</script>
+</body>
+</html>
