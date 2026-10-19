@@ -82,24 +82,47 @@ a{color:var(--accent)}
    - 596 000 lidí v exekuci na konci 2025, 6,5 % lidí 15+, průměrně ~5 exekucí na dlužníka (ČTK, 11. 2. 2026)
    ========================================================= */
 
+// ---------- RESULTS → GOOGLE FORM (fill in, see návod) ----------
+// action: odkaz končící /formResponse, nick + data: čísla polí "entry.…" z předvyplněného odkazu.
+const RESULTS_FORM = {
+  action: "https://docs.google.com/forms/d/e/1FAIpQLScq7S4vYiHctuEyUClz-1nrX1rDSpTVDrJhtHBn3H28LyoEEA/formResponse",   // např. "https://docs.google.com/forms/d/e/1FAIpQL.../formResponse"
+  nick:   "entry.594504502",   // např. "entry.111111111"
+  data:   "entry.972617279"    // např. "entry.222222222"
+};
+
 // ---------- JOBS ----------
 const JOBS = {
   elec:   {cat:"VL", pay:5, stip:true},
   mech:   {cat:"VL", pay:5, stip:true},
+  plumb:  {cat:"VL", pay:5},
+  carp:   {cat:"VL", pay:4},
   cook:   {cat:"VL", pay:4},
+  baker:  {cat:"VL", pay:4},
+  gard:   {cat:"VL", pay:4},
+  shop:   {cat:"VL", pay:3},
   hair:   {cat:"VL", pay:4},
   acct:   {cat:"M",  pay:6},
   tech:   {cat:"M",  pay:6},
   police: {cat:"M",  pay:5, state:true},
   graph:  {cat:"M",  pay:5},
+  itadm:  {cat:"M",  pay:6},
+  nurse:  {cat:"M",  pay:5, state:true},
+  fire:   {cat:"M",  pay:5, state:true},
+  travel: {cat:"M",  pay:4},
   teacher:{cat:"VS", pay:7, state:true, needsMgr:true, bcJob:"asst"},
   prog:   {cat:"VS", pay:9, bcPay:8},
   lawyer: {cat:"VS", pay:9, needsMgr:true, bcJob:"para"},
+  eng:    {cat:"VS", pay:9, bcPay:8},
+  econ:   {cat:"VS", pay:9, bcPay:8},
+  arch:   {cat:"VS", pay:8, needsMgr:true, bcJob:"archA"},
+  psych:  {cat:"VS", pay:7, needsMgr:true, bcJob:"social"},
   doctor: {cat:"VS", pay:10, state:true, doctor:true},
   asst:   {cat:"BC", pay:4, state:true},
-  para:   {cat:"BC", pay:5}
+  para:   {cat:"BC", pay:5},
+  archA:  {cat:"BC", pay:5},
+  social: {cat:"BC", pay:4, state:true}
 };
-const POPULAR = {prog:4,police:2,doctor:2,lawyer:2,graph:2,hair:1.5,mech:1.5,elec:1,cook:1,acct:1,teacher:1,tech:1};
+const POPULAR = {prog:4,police:2,doctor:2,lawyer:2,graph:2,hair:1.5,mech:1.5,elec:1,cook:1,acct:1,teacher:1,tech:1,plumb:1,carp:1,baker:0.7,gard:0.7,shop:1,itadm:1.5,nurse:1,fire:1.5,travel:1,eng:1,econ:1,arch:1.5,psych:1.5};
 const AGES = [15,18,21,24,27,30,33,36,39,42,45,48];
 const ROUNDS = 12, COST = 2;
 
@@ -111,7 +134,7 @@ cs:{
   unitM:"peníze", unitH:"spokoj.",
   jobs:{elec:"Elektrikář/ka",mech:"Automechanik/čka",cook:"Kuchař/ka",hair:"Kadeřník/ice",acct:"Účetní",tech:"Stavební technik/čka",
     police:"Policista/tka",graph:"Grafik/čka",teacher:"Učitel/ka",prog:"Programátor/ka",lawyer:"Právník/ice",doctor:"Lékař/ka",
-    asst:"Asistent/ka pedagoga",para:"Asistent/ka v advokátní kanceláři"},
+    asst:"Asistent/ka pedagoga",para:"Asistent/ka v advokátní kanceláři",plumb:"Instalatér/ka",carp:"Truhlář/ka",baker:"Pekař/ka",gard:"Zahradník/ice",shop:"Prodavač/ka",itadm:"Správce/kyně IT",nurse:"Praktická sestra / zdravotník",fire:"Hasič/ka",travel:"Recepční v hotelu",eng:"Strojní inženýr/ka",econ:"Ekonom/ka",arch:"Architekt/ka",psych:"Psycholog/žka",archA:"Asistent/ka architekta",social:"Pracovník/ce v sociálních službách"},
   paths:{VL:["Učební obor","3 roky, výuční list. Hodně praxe, vyděláváš od 18."],
          M:["Střední škola s maturitou","4 roky, maturita. Vyděláváš od 19."],
          VS:["Maturita a potom vysoká škola","Bakalář 3 roky, magistr další 2. Roky bez platu, potom vyšší plat. Čekají tě přijímačky."]},
@@ -288,9 +311,76 @@ cs:{
     <li><span>Střední s maturitou</span><span class="v">44 636 Kč</span></li><li><span>Vyšší odborné a bakalářské</span><span class="v">51 855 Kč</span></li>
     <li><span>Vysokoškolské (magistr)</span><span class="v">65 527 Kč</span></li></ul>
     <p class="note">Medián = polovina lidí bere víc, polovina míň. Zdroj: ISPV (MPSV).</p>
-    <p><b>Dluhy:</b> na konci roku 2025 bylo v Česku v exekuci asi 596 000 lidí, tedy 6,5 % lidí starších 15 let. Každý z nich měl v průměru asi 5 exekucí. Zdroj: Mapa exekucí (ČTK, 2026).</p>`,
+    <p><b>Dluhy:</b> na konci roku 2025 bylo v Česku v exekuci asi 596 000 lidí, tedy 6,5 % lidí starších 15 let. Každý z nich měl v průměru asi 5 exekucí. Zdroj: Mapa exekucí (ČTK, 2026).</p><p><b>Oddlužení</b> (osobní bankrot) trvá v Česku obvykle 3 až 5 let. Dlužník celou dobu žije z nezabavitelné částky a potom mu soud zbytek dluhů odpustí.</p>`,
   reflT:"Zamysli se",
   refl:["Vybral(a) by sis znovu stejně? Proč?","Vyplatila se ve hře vysoká škola? A magistr navíc?","Za co jsi utrácel(a)? Udělalo ti to radost na dlouho?","Byl(a) jsi někdy v mínusu? Jak ses tam dostal(a)?","Ve hře jsi zjistil(a), jestli tě práce baví, hodem kostky. Jak to zjistit ve skutečnosti dřív, než si vybereš školu?"],
+  X:{
+    ev:{
+      sick:[["Nemoc","Chřipka, pak zápal plic. Měsíc v posteli. Teprve teď si uvědomuješ, jak křehké je zdraví."],
+            ["Zlomená noha","Uklouzl(a) jsi na zamrzlém chodníku. Šest týdnů v sádře a nemocenská je mnohem nižší než výplata."],
+            ["Únava, která nepřechází","Nemoc přešla, ale únava zůstala. Ještě dva měsíce se ráno sotva vyhrabeš z postele."]],
+      sickStud:[["Nemoc","Onemocněl(a) jsi těsně před zkouškami. Dva týdny v posteli a pak dohánění všeho, co jsi zameškal(a)."]],
+      injury:[["Úraz","Při práci sis poranil(a) ruku. Řemeslník se zraněnou rukou nevydělává. Tři měsíce doma a nemocenská je mnohem nižší než výplata."],
+              ["Záda","Zvedl(a) jsi něco těžkého a záda řekla dost. Měsíc rehabilitace a žádné zakázky."]],
+      layoff:[["Firma propouští","Ráno si tě zavolal šéf: „Je mi líto, ale končíš.“ Ten den jsi dlouho jen seděl(a) na lavičce před domem. Stát ti platí podporu v nezaměstnanosti, takže máš aspoň polovinu platu. Úřad práce ti nabízí rekvalifikaci zdarma."]],
+      layoffState:[["Propouštění kolem tebe","Kamarád z firmy přišel o práci. Ty pracuješ pro stát, takže se tě to netýká. Ale když ho vidíš, jak hledá novou práci, máš divný pocit."]],
+      car:[["Auto se porouchalo","Převodovka. Mechanik se tváří vážně a řekne číslo, ze kterého se ti zatočí hlava."],
+           ["Ťukanec","Někdo do tebe na parkovišti nacouval a ujel. Opravu platíš sám(sama)."]],
+      theft:[["Krádež","Před obchodem ti někdo ukradl kolo. Zámek byl laciný."],
+             ["Ztracená peněženka","V tramvaji ti někdo vytáhl peněženku. Doklady, karty, hotovost. A pak den na úřadech."]],
+      flood:[["Vytopil tě soused","Soused nad tebou nechal puštěnou pračku. Strop je mokrý a podlaha zničená. Pojištění domácnosti nemáš."]],
+      friendLoan:[["Půjčka kamarádovi","Kamarád potřeboval peníze „jen na měsíc“. Je to rok, neozývá se a na zprávy neodpovídá. Přišel(a) jsi o peníze i o kamaráda."]],
+      parentIll:[["Táta v nemocnici","Táta měl infarkt. Přežil, ale každý víkend teď jezdíš za ním a pak domů pomáhat mámě."]],
+      breakup:[["Rozchod","Po letech spolu jste se rozešli. Byt je najednou prázdný a nájem musíš platit sám(sama)."]],
+      divorce:[["Rozvod","Manželství se rozpadlo. Právník, dělení majetku, stěhování. Je to drahé a bolí to víc, než sis myslel(a). Náklady na bydlení zase platíš sám(sama)."]],
+      divorceKids:" Děti zůstávají s bývalým partnerem a ty platíš výživné.",
+      partner:[["Nový vztah","Na svatbě kamarádky jsi potkal(a) někoho, s kým si rozumíš. Po půl roce spolu bydlíte a nájem platíte napůl."],
+               ["Láska na horách","Seznámili jste se na horách. Po pár měsících spolu bydlíte a náklady se dělí napůl."]],
+      wedding:[["Svatba","Bereš se! Oslava pro sedmdesát lidí, šaty, prstýnky, hudba. Nejkrásnější den, ale stál hodně peněz."]],
+      baby:[["Dítě","Narodilo se vám dítě. Méně spánku, víc výdajů, ale obrovská radost. Stát přispívá rodičovským příspěvkem, ale dítě stojí peníze každý měsíc až do dospělosti."]],
+      baby2:[["Druhé dítě","Máte druhé dítě. Doma je hluk, nepořádek a hodně smíchu. A další výdaje."]],
+      move:[["Stěhování","Stěhuješ se do většího a hezčího bytu. Konečně máš kam pozvat kamarády."]],
+      reunionUp:[["Sraz třídy","Po dvaceti letech jste se sešli se spolužáky ze základky. Někdo podniká, někdo je doma s dětmi, někdo pořád hledá. Odcházíš s dobrým pocitem, že ses neztratil(a)."]],
+      reunionDown:[["Sraz třídy","Po dvaceti letech jste se sešli se spolužáky ze základky. Všichni vypadají spokojeně a ty se přistihneš, že o své práci raději moc nemluvíš."]],
+      teen:[["Puberta","Tvoje dítě je v pubertě. Bouchá dveřmi, neodpovídá a chce nový mobil. Tohle ti nikdo neřekl."]],
+      calm:[["Klidné období","Nic zvláštního. Práce, rodina, kamarádi. Někdy je klid to nejlepší, co se může stát."],
+            ["Obyčejné roky","Nic velkého se nestalo. Až později zjistíš, že to byly dobré roky."],
+            ["Klid","Žádné drama. Jen obyčejný život, který plyne."]],
+      calmStud:[["Klidné období","Ve škole jde všechno hladce. Zkoušky zvládáš a máš i čas na kamarády."]],
+      stip:[["Stipendium","Za dobré výsledky ve škole dostaneš stipendium. Poprvé máš pocit, že se učení vyplácí i hned."]],
+      reco:[["Doporučení","Zákazníci tě doporučují dál. Máš víc zakázek, než stihneš, a můžeš si vybírat."]],
+      promo:[["Povýšení","Šéf tě povýšil. Víc peněz, ale taky víc odpovědnosti a víc e-mailů večer."],
+             ["Nový šéf tě ocenil","Nový vedoucí si všiml tvé práce a přidal ti. Konečně."]],
+      bonus:[["Odměna","Na konci roku přišla odměna. Malá, ale potěší."],["Přeplatek","Z daňového přiznání ti vrátili peníze. Nečekaný dárek."]],
+      inherit:[["Dědictví","Zemřela babička. Zdědil(a) jsi její úspory. Peníze se hodí, ale radši bys měl(a) ji."]],
+      hobby:[["Půlmaraton","Po roce trénování jsi uběhl(a) půlmaraton. Nohy bolí, ale jsi na sebe pyšný(á)."],
+             ["První koncert","Vaše kapela měla první koncert v místní hospodě. Přišlo dvacet lidí a všichni tleskali."]]
+    },
+    l:{sick:"Nemoc a výpadek příjmu",injury:"Úraz a výpadek příjmu",layoff:"Propuštění: přijdeš o polovinu platu",car:"Oprava auta",theft:"Krádež",
+       flood:"Oprava bytu",friendLoan:"Nevrácená půjčka",parentIll:"Starost o tátu",breakup:"Rozchod",divorce:"Rozvod",partner:"Nový vztah",wedding:"Svatba",
+       baby:"Narození dítěte",move:"Stěhování",reunion:"Sraz třídy",teen:"Puberta",stip:"Stipendium",reco:"Víc zakázek",promo:"Povýšení",bonus:"Odměna",
+       inherit:"Dědictví",hobby:"Radost z koníčku"},
+    l_kids:n=>`Výdaje na děti (${n})`, l_alim:"Výživné", l_costShared:"Náklady na život (bydlíte spolu)",
+    vac1:["Dovolená v Česku","−1 peníze, +1 spokojenost"], vac2:["Dovolená u moře","−3 peníze, +2 spokojenost"],
+    v1:["Týden pod stanem na Lipně. Komáři, déšť a nejlepší kafe z vařiče, jaké jsi kdy pil(a).","Chata u babičky v Krkonoších. Houby, karty a žádný signál. Přesně to jsi potřeboval(a).","Na kole podél Labe až do Drážďan. Spálená záda a hlava úplně čistá."],
+    v2:["Týden v Chorvatsku. Moře, grilované ryby a telefon v kufru.","Řecký ostrov, bílé domky, modré moře. Vracíš se opálený(á) a s chutí do práce.","Itálie: pizza, zmrzlina a památky. Nohy bolí z chození, ale stálo to za to."],
+    vPoor:" Jenže si to vlastně nemůžeš dovolit a celou dobu na to myslíš.",
+    fun:["Fotbal s kamarády každý čtvrtek. Nic velkého, ale díky tomu nežiješ jen pro práci.","Konečně ses naučil(a) na kytaru tři akordy. Stačí to na táborák.","Lezecká stěna dvakrát týdně. Ruce bolí, hlava odpočívá.","Deskovky s partou každý pátek. Prohráváš, ale směješ se."],
+    normalOk:["Práce, domov, víkendy s kamarády. Klidné období, které ti vyhovuje.","Chodíš do práce, večer vaříš a o víkendu jezdíš na výlety.","Obyčejné tři roky. Nic tě netrápí."],
+    normalBad:["Práce, domov, spánek. A znovu. Někdy si říkáš, jestli tohle je všechno.","Dny splývají. Pondělí vypadá jako čtvrtek a čtvrtek jako pondělí.","Každý večer si slibuješ, že s tím něco uděláš. Pak usneš u televize."],
+    family:"Rodina", fam:(p,k)=>({none:"bez partnera",partner:"s partnerem",married:"v manželství",divorced:"po rozvodu"}[p])+(k?`, dětí: ${k}`:""),
+    bk_title:"Oddlužení (osobní bankrot)",
+    bk_offer:"Dluhy ti přerůstají přes hlavu. Můžeš požádat soud o oddlužení. Dvě kola budeš žít z nezbytného minima a část výplaty půjde věřitelům. Úroky a splátky se zastaví a na konci ti soud zbytek dluhů odpustí. Banka ti ale už nikdy nepůjčí.",
+    bk_yes:["Požádat o oddlužení","Dluhy se zastaví, 2 kola splácíš část výplaty"], bk_no:["Zkusit to zvládnout sám(sama)","Dluhy a úroky běží dál"],
+    bk_start:"Soud oddlužení povolil. Exekutor ti už nevolá a poprvé po dlouhé době spíš celou noc. Teď musíš dvě kola vyjít s minimem.",
+    l_bkStart:"Oddlužení: dluhy převzal soud", l_bkPay:"Splátka věřitelům (oddlužení)", l_bkNeg:"Strach ze zrušení oddlužení",
+    bk_done:"<b>Oddlužení skončilo.</b> Zbytek dluhů ti soud odpustil. Začínáš znovu, ale banky si tě pamatují.", l_bkDone:"Konec oddlužení: úleva",
+    bk_neg:"<b>Pozor, jsi v oddlužení.</b> Musíš vyjít s tím, co máš. Když budeš dál v mínusu, soud může oddlužení zrušit.",
+    noBank:"Banka ti po oddlužení nepůjčí.", inBk:"V oddlužení si to nemůžeš dovolit.", hudBk:"v oddlužení",
+    debtsBk:"Prošel(a) jsi oddlužením. Bylo to těžké a styděl(a) ses, ale dostal(a) ses z dluhů a začal(a) znovu. Pro mnoho lidí v exekuci je oddlužení jediná cesta ven.",
+    send:"Odeslat výsledek učiteli", nick:"Přezdívka nebo iniciály (ne celé jméno)", sent:"Odesláno. Díky!", sending:"Odesílám…",
+    copy:"Zkopírovat výsledek", copied:"Zkopírováno do schránky", sendErr:"Nepodařilo se odeslat. Zkopíruj výsledek a pošli ho učiteli jinak.", needNick:"Napiš přezdívku."
+  },
   again:"Hrát znovu", finalBtn:"Závěr", seeEnd:"Podívat se na celý život"
 },
 en:{
@@ -299,7 +389,7 @@ en:{
   unitM:"money", unitH:"happy",
   jobs:{elec:"Electrician",mech:"Car mechanic",cook:"Cook",hair:"Hairdresser",acct:"Accountant",tech:"Building technician",
     police:"Police officer",graph:"Graphic designer",teacher:"Teacher",prog:"Programmer",lawyer:"Lawyer",doctor:"Doctor",
-    asst:"Teaching assistant",para:"Legal assistant"},
+    asst:"Teaching assistant",para:"Legal assistant",plumb:"Plumber",carp:"Carpenter",baker:"Baker",gard:"Gardener",shop:"Shop assistant",itadm:"IT administrator",nurse:"Practical nurse",fire:"Firefighter",travel:"Hotel receptionist",eng:"Mechanical engineer",econ:"Economist",arch:"Architect",psych:"Psychologist",archA:"Architect's assistant",social:"Social care worker"},
   paths:{VL:["Vocational school","3 years, apprenticeship certificate. Lots of practice, you earn from 18."],
          M:["Secondary school with maturita","4 years, final exam (maturita). You earn from 19."],
          VS:["Maturita, then university","Bachelor's 3 years, master's 2 more. Years without pay, then higher pay. Entrance exams first."]},
@@ -474,9 +564,76 @@ en:{
     <li><span>Secondary with maturita</span><span class="v">44,636 CZK</span></li><li><span>Higher vocational and bachelor's</span><span class="v">51,855 CZK</span></li>
     <li><span>University (master's)</span><span class="v">65,527 CZK</span></li></ul>
     <p class="note">Median = half of people earn more, half less. Source: ISPV (Czech Ministry of Labour).</p>
-    <p><b>Debts:</b> at the end of 2025, about 596,000 people in the Czech Republic faced debt collection (exekuce), 6.5% of people over 15. Each had about 5 cases on average. Source: Map of Debt Collection (ČTK, 2026).</p>`,
+    <p><b>Debts:</b> at the end of 2025, about 596,000 people in the Czech Republic faced debt collection (exekuce), 6.5% of people over 15. Each had about 5 cases on average. Source: Map of Debt Collection (ČTK, 2026).</p><p><b>Debt relief</b> (personal bankruptcy) in the Czech Republic usually takes 3 to 5 years. The debtor lives on the protected minimum income, and then the court cancels the rest of the debt.</p>`,
   reflT:"Think about it",
   refl:["Would you choose the same again? Why?","Was university worth it in the game? And the extra master's?","What did you spend money on? Did it make you happy for long?","Were you ever in debt? How did you get there?","In the game a die decided whether you enjoy your job. How could you find out in real life before you choose a school?"],
+  X:{
+    ev:{
+      sick:[["Illness","Flu, then pneumonia. A month in bed. Only now do you realise how fragile health is."],
+            ["Broken leg","You slipped on an icy pavement. Six weeks in a cast, and sick pay is much lower than your salary."],
+            ["Tiredness that won't go","The illness is gone, but the tiredness stayed. For two more months you can hardly get out of bed."]],
+      sickStud:[["Illness","You got ill just before exams. Two weeks in bed, then catching up on everything."]],
+      injury:[["Injury","You hurt your hand at work. A tradesperson with an injured hand doesn't earn. Three months at home, and sick pay is much lower than your salary."],
+              ["Your back","You lifted something heavy and your back said no. A month of physiotherapy and no work."]],
+      layoff:[["You're laid off","In the morning your boss calls you in: “I'm sorry, but we have to let you go.” That day you sat on a bench outside your home for a long time. The state pays unemployment benefit, so you get at least half your pay. The Labour Office offers free retraining."]],
+      layoffState:[["Layoffs around you","A friend lost his job. You work for the state, so it doesn't affect you. But watching him look for work feels strange."]],
+      car:[["Your car broke down","The gearbox. The mechanic looks serious and names a price that makes your head spin."],
+           ["A dent","Someone reversed into you in a car park and drove off. You pay for the repair yourself."]],
+      theft:[["Theft","Someone stole your bike outside a shop. The lock was cheap."],
+             ["Lost wallet","Someone took your wallet on the tram. ID, cards, cash. Then a day at government offices."]],
+      flood:[["Flooded flat","Your upstairs neighbour left the washing machine on. The ceiling is wet and the floor is ruined. You have no home insurance."]],
+      friendLoan:[["A loan to a friend","A friend needed money “just for a month”. It's been a year, he doesn't call or answer messages. You lost the money and the friend."]],
+      parentIll:[["Dad in hospital","Your dad had a heart attack. He survived, but every weekend you visit him and then help your mum at home."]],
+      breakup:[["Break-up","After years together, you broke up. The flat is suddenly empty, and you pay the rent alone."]],
+      divorce:[["Divorce","Your marriage fell apart. Lawyers, splitting things, moving out. It's expensive and hurts more than you expected. You pay housing costs alone again."]],
+      divorceKids:" The children stay with your ex-partner and you pay child support.",
+      partner:[["A new relationship","At a friend's wedding you met someone you get on with. After six months you live together and split the rent."],
+               ["Love in the mountains","You met on a ski trip. A few months later you live together and share the costs."]],
+      wedding:[["Wedding","You're getting married! A party for seventy people, a dress, rings, music. The best day, but it cost a lot."]],
+      baby:[["A baby","You had a baby. Less sleep, more costs, but huge joy. The state pays parental allowance, but a child costs money every month until adulthood."]],
+      baby2:[["A second child","You have a second child. Home is noisy, messy and full of laughter. And more costs."]],
+      move:[["Moving","You move to a bigger, nicer flat. Finally you can invite friends over."]],
+      reunionUp:[["Class reunion","Twenty years later you meet your primary school classmates. Some run businesses, some are at home with kids, some are still searching. You leave feeling good about where you are."]],
+      reunionDown:[["Class reunion","Twenty years later you meet your primary school classmates. Everyone seems happy, and you notice you'd rather not talk about your job."]],
+      teen:[["Teenager","Your child is a teenager. Slams doors, doesn't answer, wants a new phone. Nobody told you about this."]],
+      calm:[["A calm time","Nothing special. Work, family, friends. Sometimes calm is the best thing that can happen."],
+            ["Ordinary years","Nothing big happened. Only later you realise those were good years."],
+            ["Quiet","No drama. Just ordinary life going by."]],
+      calmStud:[["A calm time","Everything at university goes well. You pass your exams and have time for friends."]],
+      stip:[["Scholarship","You get a scholarship for good results. For the first time studying pays off right away."]],
+      reco:[["Recommendations","Customers recommend you to others. You have more work than you can handle and can choose."]],
+      promo:[["Promotion","Your boss promoted you. More money, but also more responsibility and more emails in the evening."],
+             ["A new boss noticed you","Your new manager noticed your work and gave you a raise. Finally."]],
+      bonus:[["Bonus","A bonus at the end of the year. Small, but nice."],["Tax refund","You got money back from your tax return. An unexpected gift."]],
+      inherit:[["Inheritance","Your grandmother died. You inherited her savings. The money helps, but you'd rather have her."]],
+      hobby:[["Half marathon","After a year of training you ran a half marathon. Your legs hurt, but you're proud of yourself."],
+             ["First gig","Your band played its first gig in a local pub. Twenty people came and everyone clapped."]]
+    },
+    l:{sick:"Illness and lost income",injury:"Injury and lost income",layoff:"Laid off: you lose half your pay",car:"Car repair",theft:"Theft",
+       flood:"Flat repair",friendLoan:"Unpaid loan",parentIll:"Looking after dad",breakup:"Break-up",divorce:"Divorce",partner:"New relationship",wedding:"Wedding",
+       baby:"New baby",move:"Moving",reunion:"Class reunion",teen:"Teenager",stip:"Scholarship",reco:"More work",promo:"Promotion",bonus:"Bonus",
+       inherit:"Inheritance",hobby:"Joy from your hobby"},
+    l_kids:n=>`Child costs (${n})`, l_alim:"Child support", l_costShared:"Living costs (living together)",
+    vac1:["Holiday in Czechia","−1 money, +1 happiness"], vac2:["Holiday by the sea","−3 money, +2 happiness"],
+    v1:["A week camping at Lipno lake. Mosquitoes, rain and the best camp-stove coffee you've ever had.","Grandma's cottage in the Krkonoše mountains. Mushrooms, cards and no signal. Exactly what you needed.","Cycling along the Elbe all the way to Dresden. Sunburnt back and a completely clear head."],
+    v2:["A week in Croatia. The sea, grilled fish and your phone in your suitcase.","A Greek island, white houses, blue sea. You come back tanned and ready for work.","Italy: pizza, ice cream and old buildings. Your feet hurt from walking, but it was worth it."],
+    vPoor:" But you can't really afford it, and you think about it the whole time.",
+    fun:["Football with friends every Thursday. Nothing big, but it means you don't live just for work.","You finally learned three chords on the guitar. Enough for a campfire.","Climbing wall twice a week. Your arms hurt, your head rests.","Board games with friends every Friday. You lose, but you laugh."],
+    normalOk:["Work, home, weekends with friends. A calm time that suits you.","You go to work, cook in the evening and go on trips at weekends.","Three ordinary years. Nothing bothers you."],
+    normalBad:["Work, home, sleep. Again. Sometimes you wonder if this is all.","The days blur. Monday looks like Thursday and Thursday like Monday.","Every evening you promise yourself you'll change something. Then you fall asleep in front of the TV."],
+    family:"Family", fam:(p,k)=>({none:"single",partner:"with a partner",married:"married",divorced:"divorced"}[p])+(k?`, children: ${k}`:""),
+    bk_title:"Debt relief (personal bankruptcy)",
+    bk_offer:"Your debts are out of control. You can ask the court for debt relief. For two rounds you will live on the bare minimum and part of your pay will go to your creditors. Interest and repayments stop, and at the end the court cancels the rest of your debt. But no bank will ever lend to you again.",
+    bk_yes:["Ask for debt relief","Debts stop growing, you pay part of your income for 2 rounds"], bk_no:["Try to manage on your own","Debts and interest keep growing"],
+    bk_start:"The court approved your debt relief. The bailiff stops calling, and for the first time in ages you sleep through the night. Now you have to live on the minimum for two rounds.",
+    l_bkStart:"Debt relief: the court took over your debts", l_bkPay:"Payment to creditors (debt relief)", l_bkNeg:"Fear of losing debt relief",
+    bk_done:"<b>Debt relief is over.</b> The court cancelled the rest of your debt. You start again, but banks remember you.", l_bkDone:"End of debt relief: relief",
+    bk_neg:"<b>Careful, you're in debt relief.</b> You must manage with what you have. If you stay in the red, the court can cancel your debt relief.",
+    noBank:"After debt relief, no bank will lend to you.", inBk:"You can't afford this during debt relief.", hudBk:"in debt relief",
+    debtsBk:"You went through debt relief. It was hard and you felt ashamed, but you got out of debt and started again. For many people facing debt collection, debt relief is the only way out.",
+    send:"Send result to the teacher", nick:"Nickname or initials (not your full name)", sent:"Sent. Thanks!", sending:"Sending…",
+    copy:"Copy result", copied:"Copied to clipboard", sendErr:"Couldn't send. Copy the result and give it to your teacher another way.", needNick:"Write a nickname."
+  },
   again:"Play again", finalBtn:"The end", seeEnd:"See your whole life"
 }};
 let lang="cs";
@@ -488,7 +645,7 @@ let S;
 function fresh(){
   S={money:0,happy:5,round:1,job:null,degree:"none",perm:0,workStart:2,special:{},uni:null,examRetry:false,examDone:false,
      enjoy:null,reason:"",retrained:false,burnout:false,pending:null,partTime:0,partTimeJob:null,laidOff:false,roundPay:0,
-     loans:[],car:false,phones:0,log:[],lines:[],path:null,
+     loans:[],car:false,phones:0,partner:"none",kids:[],alimKids:[],seen:{},firstJob:null,bk:0,bkUsed:false,log:[],lines:[],path:null,
      stats:{debtRounds:0,overpaid:0,minMoney:0,overtime:0,vac:0,jobChanges:0}};
   const names=Object.keys(POPULAR), w=names.map(n=>POPULAR[n]), tot=w.reduce((a,b)=>a+b,0);
   S.classCounts={}; Object.keys(JOBS).forEach(n=>S.classCounts[n]=0);
@@ -514,6 +671,7 @@ function hud(){
   if(S.job && working()) jl+=` · ${t.pay} ${jobPay()}`;
   if(S.enjoy!==null) jl+=" · "+(S.enjoy>0?t.enjoyYes:S.enjoy<0?t.enjoyNo:t.enjoyOk);
   const lp=S.loans.reduce((a,l)=>a+l.per,0); if(lp) jl+=` · ${t.repay} ${lp}`;
+  if(S.bk>0) jl+=" · "+t.X.hudBk;
   $("#hJob").textContent=jl;
   $("#hBar").style.width=(Math.min(S.round-1,ROUNDS)/ROUNDS*100)+"%";
 }
@@ -569,7 +727,7 @@ function chooseJob(cat){
 function whyJob(n){
   const t=T();
   render(`<p class="kicker">${jn(n)}</p><h2>${t.why}</h2><p>${t.whyText}</p><label for="why">${t.whyLabel}</label><textarea id="why" maxlength="200"></textarea>`,
-    [{t:t.next,primary:true,go:()=>{S.reason=$("#why").value.trim(); S.job=n; round1();}}]);
+    [{t:t.next,primary:true,go:()=>{S.reason=$("#why").value.trim(); S.job=n; S.firstJob=n; round1();}}]);
 }
 
 // ---------- ROUND 1 ----------
@@ -635,7 +793,7 @@ function worldEvent(){
   const t=T(), Y=t.Y, r=S.round, n=S.job, w=working(), j=job(), vl=j.cat==="VL";
   let you="";
   if(r===2){ you = S.special[2]&&S.special[2].l===t.l_brig ? Y.s2_work : !w&&!S.special[2] ? Y.s2_stud : vl ? Y.s2_VL : j.cat==="M"&&S.path==="M" ? Y.s2_M : Y.s2_work; }
-  if(r===3){ if(w&&["elec","tech"].includes(n)){add(t.W[3][0],2); you=Y.boomYes;} else you=w?Y.boomNo:Y.boomStud; }
+  if(r===3){ if(w&&["elec","tech","plumb","carp","arch"].includes(n)){add(t.W[3][0],2); you=Y.boomYes;} else you=w?Y.boomNo:Y.boomStud; }
   if(r===4){
     if(!w) you=Y.aiStud;
     else if(n==="acct"){S.perm-=1; add(t.W[4][0],-1); you=Y.aiAcct;}
@@ -673,7 +831,12 @@ function roundSummary(pre){
   const p=currentPay(); let pay=p.v, l=p.l;
   if(S.burnout&&pay>0){ pay=Math.floor(pay/2); l+=t.l_burnHalf; }
   S.burnout=false; S.roundPay=pay;
-  add(l,pay); add(t.l_cost,-COST);
+  add(l,pay);
+  if(S.bk>0){ const c=Math.max(0,Math.floor((pay-2)/2)); if(c) add(t.X.l_bkPay,-c); }
+  const together=S.partner==="partner"||S.partner==="married";
+  add(together?t.X.l_costShared:t.l_cost,-(together?COST-1:COST));
+  const kidsHome=S.kids.filter(b=>S.round-b<6).length; if(kidsHome) add(t.X.l_kids(kidsHome),-kidsHome);
+  const alim=S.alimKids.filter(b=>S.round-b<6).length; if(alim) add(t.X.l_alim,-alim);
   S.loans.forEach(x=>{ add(t.l_loan(x.name),-x.per); x.left--; });
   S.loans=S.loans.filter(x=>x.left>0);
   const E=worldEvent();
@@ -694,21 +857,55 @@ function enjoyRoll(){
       [{t:t.personalBtn,primary:true,go:personal}]);
   });
 }
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+// event deck: cat b=bad, l=life, g=good; c=condition; once=only once per life; w=weight
+const EVENTS=[
+  {id:"sick",cat:"b",w:2,c:()=>true,go:X=>{ const w=working(), vl=job().cat==="VL";
+     if(!w){ add(X.l.sick,-1,-1); return pick(X.ev.sickStud);} if(vl){ add(X.l.injury,-3,-1); return pick(X.ev.injury);} add(X.l.sick,-1,-1); return pick(X.ev.sick);} },
+  {id:"layoff",cat:"b",w:2,c:()=>working()&&!job().state,go:X=>{ add(X.l.layoff,-Math.ceil(S.roundPay/2),-1); S.laidOff=true; return pick(X.ev.layoff);} },
+  {id:"layoffState",cat:"b",w:1,c:()=>working()&&job().state,go:X=>pick(X.ev.layoffState)},
+  {id:"car",cat:"b",w:2,c:()=>S.car,go:X=>{ add(X.l.car,-2); return pick(X.ev.car);} },
+  {id:"theft",cat:"b",w:1,c:()=>true,go:X=>{ add(X.l.theft,-1); return pick(X.ev.theft);} },
+  {id:"flood",cat:"b",w:1,once:true,c:()=>age()>=21,go:X=>{ add(X.l.flood,-2); return pick(X.ev.flood);} },
+  {id:"friendLoan",cat:"b",w:1,once:true,c:()=>age()>=21,go:X=>{ add(X.l.friendLoan,-2,-1); return pick(X.ev.friendLoan);} },
+  {id:"parentIll",cat:"b",w:1,once:true,c:()=>age()>=36,go:X=>{ add(X.l.parentIll,-1,-1); return pick(X.ev.parentIll);} },
+  {id:"breakup",cat:"b",w:2,c:()=>S.partner==="partner",go:X=>{ S.partner="none"; add(X.l.breakup,0,-2); return pick(X.ev.breakup);} },
+  {id:"divorce",cat:"b",w:2,once:true,c:()=>S.partner==="married"&&age()>=27,go:X=>{
+     S.partner="divorced"; add(X.l.divorce,-4,-3); const e=pick(X.ev.divorce); const k=S.kids.filter(b=>S.round-b<6);
+     if(k.length){ S.alimKids=k; S.kids=[]; return [e[0],e[1]+X.ev.divorceKids]; } return e; } },
+  {id:"partner",cat:"l",w:3,c:()=>(S.partner==="none"||S.partner==="divorced")&&age()>=18&&age()<=42,go:X=>{ S.partner="partner"; add(X.l.partner,0,2); return pick(X.ev.partner);} },
+  {id:"wedding",cat:"l",w:3,once:true,c:()=>S.partner==="partner"&&age()>=21&&age()<=45,go:X=>{ S.partner="married"; add(X.l.wedding,-3,2); return pick(X.ev.wedding);} },
+  {id:"baby",cat:"l",w:3,c:()=>(S.partner==="partner"||S.partner==="married")&&age()>=21&&age()<=42&&S.kids.length<2,go:X=>{
+     S.kids.push(S.round+1); add(X.l.baby,-1,2); return pick(S.kids.length>1?X.ev.baby2:X.ev.baby);} },
+  {id:"move",cat:"l",w:1,once:true,c:()=>age()>=18&&age()<=33,go:X=>{ add(X.l.move,-1,1); return pick(X.ev.move);} },
+  {id:"reunion",cat:"l",w:2,once:true,c:()=>age()>=33,go:X=>{ const up=S.happy>=7; add(X.l.reunion,0,up?1:-1); return pick(up?X.ev.reunionUp:X.ev.reunionDown);} },
+  {id:"teen",cat:"l",w:2,once:true,c:()=>S.kids.some(b=>S.round-b>=4&&S.round-b<6),go:X=>{ add(X.l.teen,-1,-1); return pick(X.ev.teen);} },
+  {id:"calm",cat:"l",w:1,c:()=>true,go:X=>pick(working()?X.ev.calm:X.ev.calmStud)},
+  {id:"stip",cat:"g",w:3,c:()=>!working(),go:X=>{ add(X.l.stip,3); return pick(X.ev.stip);} },
+  {id:"reco",cat:"g",w:3,c:()=>working()&&job().cat==="VL",go:X=>{ add(X.l.reco,3); return pick(X.ev.reco);} },
+  {id:"promo",cat:"g",w:3,c:()=>working()&&job().cat!=="VL",go:X=>{ add(X.l.promo,3); return pick(X.ev.promo);} },
+  {id:"bonus",cat:"g",w:2,c:()=>working(),go:X=>{ add(X.l.bonus,2); return pick(X.ev.bonus);} },
+  {id:"inherit",cat:"g",w:1,once:true,c:()=>age()>=36,go:X=>{ add(X.l.inherit,5,-1); return pick(X.ev.inherit);} },
+  {id:"hobby",cat:"g",w:1,once:true,c:()=>true,go:X=>{ add(X.l.hobby,0,2); return pick(X.ev.hobby);} },
+  {id:"abroad",cat:"g",w:1,once:true,choice:true,c:()=>working()&&age()<=39},
+  {id:"eras",cat:"g",w:2,once:true,choice:true,c:()=>!working()&&S.examDone}
+];
+function drawEvent(r){
+  const cat=r<=2?"b":r<=4?"l":"g";
+  let pool=EVENTS.filter(e=>e.cat===cat&&e.c()&&!(e.once&&S.seen[e.id]));
+  if(!pool.length) pool=EVENTS.filter(e=>e.id==="calm");
+  let x=Math.random()*pool.reduce((a,e)=>a+e.w,0);
+  for(const e of pool){ x-=e.w; if(x<=0) return e; } return pool[0];
+}
 function personal(){
   const t=T(), P=t.P;
   rollDie(t.round(S.round,age()),`<b>${t.personalTitle}.</b> ${t.personalTxt}`,r=>{
-    S.lines=[]; const w=working(), j=job(), vl=j.cat==="VL"; let ev;
-    if(r===1){ if(!w){ev=P.sickStud; add(P.l_sick,-1,-1);} else if(vl){ev=P.injury; add(P.l_injury,-3,-1);} else {ev=P.sick; add(P.l_sick,-1,-1);} }
-    if(r===2){ if(!w) ev=P.calmStud; else if(j.state) ev=P.layoffState; else {ev=P.layoff; add(P.l_layoff,-Math.ceil(S.roundPay/2),-1); S.laidOff=true;} }
-    if(r===3){ if(S.car){ev=P.carBroke; add(P.l_car,-2);} else ev=P.calm; }
-    if(r===4){ if(!w){ev=P.stip; add(P.l_stip,3);} else if(vl){ev=P.reco; add(P.l_reco,3);} else {ev=P.promo; add(P.l_promo,3);} }
-    if(r===5){ ev=P.family; add(P.l_family,-1,2); }
-    if(r===6){
-      if(w) return render(`<p class="kicker">${t.rolled(6)}</p><h2>${P.abroad[0]}</h2><p>${P.abroad[1]}</p>`,[
+    S.lines=[]; const e=drawEvent(r); S.seen[e.id]=true;
+    if(e.id==="abroad") return render(`<p class="kicker">${t.rolled(r)}</p><h2>${P.abroad[0]}</h2><p>${P.abroad[1]}</p>`,[
         btn(P.abroadY,()=>{add(P.l_abroad,4,-2); story(P.abroadYT);}), btn(P.abroadN,()=>story(P.abroadNT))]);
-      return render(`<p class="kicker">${t.rolled(6)}</p><h2>${P.eras[0]}</h2><p>${P.eras[1]}</p>`,[
+    if(e.id==="eras") return render(`<p class="kicker">${t.rolled(r)}</p><h2>${P.eras[0]}</h2><p>${P.eras[1]}</p>`,[
         btn(P.erasY,()=>{add(P.l_eras,-1,2); story(P.erasYT);}), btn(P.erasN,()=>story(P.erasNT))]);
-    }
+    const ev=e.go(t.X);
     render(`<p class="kicker">${t.rolled(r)}</p><h2>${ev[0]}</h2><p>${ev[1]}</p>${S.lines.length?box("",linesHTML(S.lines)):""}`,
       [{t:t.decideBtn,primary:true,go:decideWork}]);
   });
@@ -727,7 +924,7 @@ function decideWork(){
     ch=[btn(t.w_study,()=>{C.push(t.t_study); decideSpend();}),
         btn(t.w_brig,()=>{add(t.l_brigL,2,-1); C.push(t.t_brig); decideSpend();})];
   } else {
-    ch=[btn(t.w_normal,()=>{C.push(t.t_normal(S.happy)); decideSpend();}),
+    ch=[btn(t.w_normal,()=>{C.push(pick(S.happy<=4?t.X.normalBad:t.X.normalOk)); decideSpend();}),
         btn(t.w_over,()=>{add(t.l_over,2,-1); S.stats.overtime++; C.push(t.t_over(S.stats.overtime)); decideSpend();})];
     if(!busy && S.round<ROUNDS){
       ch.push(btn(t.w_retr(free),()=>render(`<h2>${t.retrTitle}</h2><p>${t.retrTxt}</p>`,
@@ -741,18 +938,20 @@ function decideWork(){
   render(`${kick()}<h2>${t.decideWork}</h2>${pre}`,ch);
 }
 function decideSpend(){
-  const t=T();
+  const t=T(), X=t.X, bk=S.bk>0, nb=S.bkUsed;
+  const off=(pair,why)=>({t:pair[0],d:why,disabled:true,go:()=>{}});
   const ch=[
     btn(t.s_none,()=>{C.push(t.t_none(S.money)); consequence();}),
-    btn(t.s_fun,()=>{add(t.l_fun,-1,1); C.push(t.t_fun); consequence();}),
-    btn(t.s_phone,()=>{S.phones++; add(t.l_phone,-2,S.phones===1?1:0); C.push(t.t_phone(S.phones)); consequence();}),
-    btn(t.s_vac,()=>{const poor=S.money<3; add(t.l_vac,-3,2); S.stats.vac++; C.push(t.t_vac(poor)); consequence();})
+    btn(t.s_fun,()=>{add(t.l_fun,-1,1); C.push(pick(X.fun)); consequence();}),
+    bk?off(t.s_phone,X.inBk):btn(t.s_phone,()=>{S.phones++; add(t.l_phone,-2,S.phones===1?1:0); C.push(t.t_phone(S.phones)); consequence();}),
+    btn(X.vac1,()=>{const poor=S.money<1; add(X.vac1[0],-1,1); S.stats.vac++; C.push(pick(X.v1)+(poor?X.vPoor:"")); consequence();}),
+    bk?off(X.vac2,X.inBk):btn(X.vac2,()=>{const poor=S.money<3; add(X.vac2[0],-3,2); S.stats.vac++; C.push(pick(X.v2)+(poor?X.vPoor:"")); consequence();})
   ];
   if(!S.car){
-    ch.push(btn(t.s_car,()=>{add(t.l_car,-6,2); S.car=true; C.push(t.t_car); consequence();}));
-    ch.push(btn(t.s_carLoan,()=>{add(t.l_car,0,2); S.car=true; S.loans.push({name:t.loanCar,per:2,left:4}); S.stats.overpaid+=2; C.push(t.t_carLoan); consequence();}));
+    ch.push(bk?off(t.s_car,X.inBk):btn(t.s_car,()=>{add(t.l_car,-6,2); S.car=true; C.push(t.t_car); consequence();}));
+    ch.push(nb?off(t.s_carLoan,X.noBank):btn(t.s_carLoan,()=>{add(t.l_car,0,2); S.car=true; S.loans.push({name:t.loanCar,per:2,left:4}); S.stats.overpaid+=2; C.push(t.t_carLoan); consequence();}));
   }
-  ch.push(btn(t.s_loan,()=>{add(t.l_loanIn,5,0); S.loans.push({name:t.loanQuick,per:2,left:4}); S.stats.overpaid+=3; C.push(t.t_loan); consequence();}));
+  ch.push(nb?off(t.s_loan,X.noBank):btn(t.s_loan,()=>{add(t.l_loanIn,5,0); S.loans.push({name:t.loanQuick,per:2,left:4}); S.stats.overpaid+=3; C.push(t.t_loan); consequence();}));
   render(`${kick()}<h2>${t.decideSpend}</h2>`,ch);
 }
 function consequence(){
@@ -761,14 +960,26 @@ function consequence(){
     [{t:t.next,primary:true,go:endCheck}]);
 }
 function endCheck(){
-  const t=T(); S.lines=[]; const msg=[];
-  if(S.money<0){ add(t.l_interest,-1); S.stats.debtRounds++; S.stats.overpaid++; msg.push(t.debt); }
-  if(S.money<=-10){ add(t.l_exek,0,-1); msg.push(t.exek); }
+  const t=T(), X=t.X; S.lines=[]; const msg=[];
+  if(S.money<0){
+    if(S.bk>0){ add(X.l_bkNeg,0,-1); msg.push(X.bk_neg); }
+    else { add(t.l_interest,-1); S.stats.overpaid++; msg.push(t.debt); }
+    S.stats.debtRounds++;
+  }
+  if(S.money<=-10 && S.bk===0){ add(t.l_exek,0,-1); msg.push(t.exek); }
+  const offer = S.money<=-8 && !S.bkUsed && S.round<ROUNDS-1;
+  if(S.bk>0){ S.bk--; if(S.bk===0){ add(X.l_bkDone,0,2); msg.push(X.bk_done); } }
   if(S.happy<=2){ S.burnout=true; msg.push(t.burn); }
   S.stats.minMoney=Math.min(S.stats.minMoney,S.money);
-  if(!msg.length) return nextRound();
-  render(`${kick()}<h2>${t.warn}</h2>${msg.map(m=>`<p>${m}</p>`).join("")}${box("",linesHTML(S.lines),"warn")}`,
-    [{t:S.round<ROUNDS?t.nextRound:t.finalBtn,primary:true,go:nextRound}]);
+  if(!msg.length && !offer) return nextRound();
+  const choices = offer ? [btn(X.bk_yes,startBk), btn(X.bk_no,nextRound)]
+    : [{t:S.round<ROUNDS?t.nextRound:t.finalBtn,primary:true,go:nextRound}];
+  render(`${kick()}<h2>${t.warn}</h2>${msg.map(m=>`<p>${m}</p>`).join("")}${S.lines.length?box("",linesHTML(S.lines),"warn"):""}${offer?box(X.bk_title,`<p>${X.bk_offer}</p>`):""}`, choices);
+}
+function startBk(){
+  const t=T(), X=t.X; S.lines=[]; S.bkUsed=true; S.bk=2; S.loans=[];
+  add(X.l_bkStart,-S.money,1);
+  render(`${kick()}<h2>${X.bk_title}</h2><p>${X.bk_start}</p>${box("",linesHTML(S.lines))}`,[{t:t.nextRound,primary:true,go:nextRound}]);
 }
 
 // ---------- FINALE: hardships ----------
@@ -785,7 +996,7 @@ function finale2(){
   const t=T(); S.lines=[];
   const inDebt=S.money<0||S.loans.length>0;
   if(inDebt) add(t.l_debts,0,-2);
-  fin(inDebt?t.debtsYes:t.debtsNo,finale3,t.debtsT);
+  fin(inDebt?t.debtsYes:(S.bkUsed?t.X.debtsBk:t.debtsNo),finale3,t.debtsT);
 }
 function finale3(){
   const t=T(); S.lines=[];
@@ -794,19 +1005,44 @@ function finale3(){
 }
 
 // ---------- END ----------
+function resultString(key){
+  const st=S.stats, deg={none:"",bc:"Bc.",mgr:"Mgr."}[S.degree]||"";
+  return [["cesta",{VL:"VL",M:"M",VS:"VŠ"}[S.path]],["prvni",L.cs.jobs[S.firstJob]],["povolani",L.cs.jobs[S.job]],["titul",deg],
+    ["penize",S.money],["spokojenost",S.happy],["konec",key],["kol_v_minusu",st.debtRounds],["preplaceno",st.overpaid],
+    ["nejnizsi",st.minMoney],["prescasy",st.overtime],["dovolene",st.vac],["zmeny",st.jobChanges],
+    ["rodina",S.partner],["deti",S.kids.length+S.alimKids.length],["oddluzeni",S.bkUsed?1:0],["jazyk",lang]].map(([k,v])=>`${k}=${v}`).join("; ");
+}
 function end(){
-  const t=T(), m=S.money, h=S.happy;
+  const t=T(), X=t.X, m=S.money, h=S.happy;
   const key=m>=20&&h>=10?"both":m>=20?"rich":h>=10?"happy":"hard";
   const [title,desc]=t.endings[key];
   S.stats.minMoney=Math.min(S.stats.minMoney,m);
+  const res=resultString(key), canSend=!!RESULTS_FORM.action;
+  const sendBox=`<div class="box"><h3>${canSend?X.send:X.copy}</h3>
+    ${canSend?`<label for="nick">${X.nick}</label><input id="nick" maxlength="40" style="width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)">`:""}
+    <div class="choices">${canSend?`<button id="sendBtn" class="primary">${X.send}</button>`:""}<button id="copyBtn">${X.copy}</button></div>
+    <p id="sendMsg" class="note" aria-live="polite"></p></div>`;
   render(`<p class="kicker">${t.finKicker}</p><h1>${title}</h1><p>${desc}</p>
     ${box(t.pathT,`<table><thead><tr><th>${t.thAge}</th><th>${t.thJob}</th><th>${t.thM}</th><th>${t.thH}</th></tr></thead><tbody>
       ${S.log.map(l=>`<tr><td>${l.age}</td><td>${l.job?jn(l.job):"—"}</td><td>${l.money}</td><td>${l.happy}</td></tr>`).join("")}
       <tr><td><b>51</b></td><td><b>${jn(S.job)}</b></td><td><b>${m}</b></td><td><b>${h}</b></td></tr></tbody></table>`)}
-    ${box(t.statsT,`<ul class="lines">${t.st(S.stats).map(([a,b])=>`<li><span>${a}</span><span class="v">${b}</span></li>`).join("")}</ul>`)}
+    ${box(t.statsT,`<ul class="lines">${[[X.family,X.fam(S.partner,S.kids.length+S.alimKids.length)],...t.st(S.stats)].map(([a,b])=>`<li><span>${a}</span><span class="v">${b}</span></li>`).join("")}</ul>`)}
+    ${sendBox}
     ${box(t.realT,t.real)}
     ${box(t.reflT,`<ol style="margin:0;padding-left:20px">${t.refl.map(q=>`<li>${q}</li>`).join("")}</ol>`)}`,
     [{t:t.again,primary:true,go:start}]);
+  const msg=$("#sendMsg");
+  $("#copyBtn").onclick=async()=>{
+    try{ await navigator.clipboard.writeText(res); }catch(e){ const ta=document.createElement("textarea"); ta.value=res; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+    msg.textContent=X.copied;
+  };
+  if(canSend) $("#sendBtn").onclick=()=>{
+    const nick=$("#nick").value.trim(); if(!nick){ msg.textContent=X.needNick; $("#nick").focus(); return; }
+    const b=$("#sendBtn"); b.disabled=true; msg.textContent=X.sending;
+    fetch(RESULTS_FORM.action,{method:"POST",mode:"no-cors",body:new URLSearchParams({[RESULTS_FORM.nick]:nick,[RESULTS_FORM.data]:res})})
+      .then(()=>{ msg.textContent=X.sent; })
+      .catch(()=>{ msg.textContent=X.sendErr; b.disabled=false; });
+  };
 }
 start();
 </script>
