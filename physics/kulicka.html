@@ -107,6 +107,8 @@ input[type=range]{width:100%;accent-color:var(--ek)}
 .lv[aria-pressed="true"] .tags{color:inherit;opacity:.75}
 h2{font-family:var(--f-display);font-weight:800;font-size:20px;margin:6px 0 0}
 .small{font-size:13px;color:var(--muted);margin:0}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#langBtn{flex:none}
 .hand,.teacher{border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:14px;display:flex;flex-direction:column;gap:10px}
 .hand h2,.teacher h2{margin:0}
 .handrow{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
@@ -127,8 +129,11 @@ code{font-family:var(--f-mono)}
 <body>
 <div class="wrap">
   <header>
+    <div>
     <h1>Kuličkový kurýr</h1>
-    <p class="sub">Doruč kuličku do cíle. V každé úrovni smíš měnit jen některé věci: start, hmotnost, planetu, tření nebo polohu košíku. Ostatní je dané a musíš to vymyslet.</p>
+    <p class="sub" data-i18n="sub">Doruč kuličku do cíle. V každé úrovni smíš měnit jen některé věci: start, hmotnost, planetu, tření nebo polohu košíku. Ostatní je dané a musíš to vymyslet.</p>
+    </div>
+    <button type="button" id="langBtn">English</button>
   </header>
 
   <section class="lab">
@@ -147,60 +152,59 @@ code{font-family:var(--f-mono)}
         <span class="hint" id="hint"></span>
       </div>
       <div class="row">
-        <button type="button" class="go" id="go">Pustit!</button>
-        <button type="button" id="reset">Vrátit na start</button>
-        <button type="button" id="slow" aria-pressed="false">Zpomalit 4×</button>
+        <button type="button" class="go" id="go" data-i18n="go">Pustit!</button>
+        <button type="button" id="reset" data-i18n="reset">Vrátit na start</button>
+        <button type="button" id="slow" aria-pressed="false" data-i18n="slow">Zpomalit 4×</button>
       </div>
     </div>
 
     <aside class="panel side">
       <div id="result" hidden></div>
-      <div class="row"><button type="button" id="retry" hidden>Zkusit přesněji</button><button type="button" id="next" hidden>Další úroveň →</button></div>
+      <div class="row"><button type="button" id="retry" hidden data-i18n="retry">Zkusit přesněji</button><button type="button" id="next" hidden data-i18n="next">Další úroveň →</button></div>
       <div class="box">
-        <span class="label">Co můžeš změnit</span>
+        <span class="label" data-i18n="canChange">Co můžeš změnit</span>
         <div id="controls"></div>
       </div>
       <div class="box">
-        <span class="label">Co je dané</span>
+        <span class="label" data-i18n="fixedL">Co je dané</span>
         <dl class="fixed" id="fixed"></dl>
       </div>
       <div class="box">
         <dl class="fixed">
-          <dt>Polohová energie na startu</dt><dd class="ep" id="rEp">–</dd>
-          <dt>Rychlost teď</dt><dd id="rV">0 km/h</dd>
-          <dt>Nejvyšší rychlost</dt><dd id="rVmax">–</dd>
-          <dt>Pokusy</dt><dd id="rTries">0</dd>
+          <dt data-i18n="epStart">Polohová energie na startu</dt><dd class="ep" id="rEp">–</dd>
+          <dt data-i18n="vNow">Rychlost teď</dt><dd id="rV">0 km/h</dd>
+          <dt data-i18n="tries">Pokusy</dt><dd id="rTries">0</dd>
         </dl>
         <div class="bars" aria-label="Energie právě teď">
-          <div class="bar b-ep"><span>Polohová</span><div class="tube"><div class="fill" id="fEp"></div></div></div>
-          <div class="bar b-ek"><span>Pohybová</span><div class="tube"><div class="fill" id="fEk"></div></div></div>
-          <div class="bar b-heat"><span>Teplo a zeď</span><div class="tube"><div class="fill" id="fHeat"></div></div></div>
+          <div class="bar b-ep"><span data-i18n="barEp">Polohová</span><div class="tube"><div class="fill" id="fEp"></div></div></div>
+          <div class="bar b-ek"><span data-i18n="barEk">Pohybová</span><div class="tube"><div class="fill" id="fEk"></div></div></div>
+          <div class="bar b-heat"><span data-i18n="barHeat">Teplo a zeď</span><div class="tube"><div class="fill" id="fHeat"></div></div></div>
         </div>
       </div>
     </aside>
   </section>
 
-  <h2>Úrovně</h2>
+  <h2 data-i18n="levelsH">Úrovně</h2>
   <nav class="levels" id="levels" aria-label="Výběr úrovně"></nav>
 
   <section class="hand" aria-labelledby="handT">
-    <h2 id="handT">Odevzdat výsledek</h2>
-    <p class="small">Napiš své příjmení bez diakritiky (háčky a čárky se odstraní samy). Kód pak opiš učiteli, nebo ho vlož do formuláře.</p>
+    <h2 id="handT" data-i18n="handT">Odevzdat výsledek</h2>
+    <p class="small" data-i18n="handP">Napiš své příjmení bez diakritiky (háčky a čárky se odstraní samy). Kód pak opiš učiteli, nebo ho vlož do formuláře.</p>
     <div class="handrow">
-      <div class="ctl"><label class="label" for="pname">Příjmení</label><input type="text" id="pname" autocomplete="family-name" placeholder="napr. Novakova"></div>
-      <div class="codebox"><span class="label">Tvůj kód</span><output id="pcode">—</output><span class="small" id="pinfo"></span></div>
+      <div class="ctl"><label class="label" for="pname" data-i18n="pnameL">Příjmení</label><input type="text" id="pname" autocomplete="family-name" placeholder="napr. Novakova"></div>
+      <div class="codebox"><span class="label" data-i18n="codeL">Tvůj kód</span><output id="pcode">—</output><span class="small" id="pinfo"></span></div>
     </div>
   </section>
 
   <section class="teacher" id="ucitel" hidden aria-labelledby="teachT">
-    <h2 id="teachT">Pro učitele: kontrola kódů</h2>
-    <p class="small">Vlož řádky ve tvaru <code>příjmení; kód</code> (oddělovač může být i tabulátor nebo čárka, třeba přímo zkopírované ze Sheets).</p>
+    <h2 id="teachT" data-i18n="teachT">Pro učitele: kontrola kódů</h2>
+    <p class="small" data-i18n="teachP">Vlož řádky ve tvaru <code>příjmení; kód</code> (oddělovač může být i tabulátor nebo čárka, třeba přímo zkopírované ze Sheets).</p>
     <textarea id="tin" rows="6" placeholder="Novakova; 7KQ-4QX-2M9&#10;Svoboda; M2B-9RD-0TT"></textarea>
-    <div class="row"><button type="button" class="go" id="tgo">Vyhodnotit</button></div>
-    <div class="tablebox"><table id="tout" hidden><thead><tr><th>Příjmení</th><th>Kód</th><th>Splněno</th><th>Hvězdy</th><th>Chybí úrovně</th><th>Hvězdy po úrovních</th><th>Stav</th></tr></thead><tbody></tbody></table></div>
+    <div class="row"><button type="button" class="go" id="tgo" data-i18n="tgo">Vyhodnotit</button></div>
+    <div class="tablebox"><table id="tout" hidden><thead data-i18n="thead"><tr><th>Příjmení</th><th>Kód</th><th>Splněno</th><th>Hvězdy</th><th>Chybí úrovně</th><th>Hvězdy po úrovních</th><th>Stav</th></tr></thead><tbody></tbody></table></div>
   </section>
 
-  <p class="small foot"><a href="#ucitel">Pro učitele</a></p>
+  <p class="small foot"><a href="#ucitel" data-i18n="footA">Pro učitele</a></p>
 </div>
 
 <script>
@@ -208,7 +212,11 @@ code{font-family:var(--f-mono)}
 const W = 12, H = 8, DS = 0.04, R = 0.28, LIFT = R + 0.045;
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
-const fmt = (x, d=1) => x.toFixed(d).replace('.', ',');
+let lang = 'cs'; try { lang = localStorage.getItem('kuryrLang') === 'en' ? 'en' : 'cs'; } catch(e){}
+const tx = (cs, en) => lang === 'en' ? en : cs;
+const fmt = (x, d=1) => lang === 'en' ? x.toFixed(d) : x.toFixed(d).replace('.', ',');
+const PN = { 'Měsíc':'Moon', 'Mars':'Mars', 'Země':'Earth', 'Jupiter':'Jupiter' };
+const pn = p => lang === 'en' ? (PN[p] || p) : p;
 const PLANETS = { 'Měsíc':1.62, 'Mars':3.71, 'Země':9.81, 'Jupiter':24.8 };
 const planetOf = g => Object.keys(PLANETS).find(k => PLANETS[k] === g) || '';
 
@@ -321,6 +329,56 @@ const LEVELS = [
     task:'Prorazit zeď (80 J) a pak zabrzdit v garáži. Kombinuj start, hmotnost a tření.',
     lesson:'Celá energie ze startu se rozdělila: 80 J na zeď a zbytek na teplo při brzdění. Energie nikam nezmizela.' },
 ];
+const EN = [
+  { name:'To the other side', tags:'start',
+    task:'Slide the ball along the blue part of the ramp so that it stops in the green band on the other side (4.0–4.6 m).',
+    lesson:'Without friction the ball rises exactly to the height it started from. Potential energy turns into kinetic energy and back.' },
+  { name:'Braking zone', tags:'friction',
+    task:'The ball is fixed at the start. Set the friction of the braking strip (red) so that the ball stops in the garage.',
+    lesson:'Friction turns kinetic energy into heat. The more friction, the faster the energy disappears and the shorter the braking distance.' },
+  { name:'Over the hill', tags:'start',
+    task:'Get the ball over the 5 m hill and stop it in the green band on the right ramp (5.6–6.4 m).',
+    lesson:'At the top of the hill the ball needs potential energy m·g·5 m, so it has to start higher than 5 m.' },
+  { name:'Build the wall', tags:'wall strength',
+    task:'This time you build the wall. Set its strength so that the ball breaks through it and then stops in the green band on the right ramp.',
+    lesson:'The stronger the wall, the more energy the ball has to give it and the lower it rises afterwards. A wall that is too strong stops the ball completely.' },
+  { name:'Pile driver', tags:'drop height',
+    task:'The weight falls on the stake and drives it into the ground. Set the drop height so that the head of the stake ends up in the green band.',
+    lesson:'While falling, potential energy turns into kinetic energy. On impact the weight passes it to the stake and the soil turns it into heat. Higher drop = more energy = deeper stake.' },
+  { name:'Break the wall', tags:'mass',
+    task:'The start height is fixed. The wall holds 150 J; behind it are a braking strip and a garage. Pick a mass so that the ball breaks the wall and still stops in the garage.',
+    lesson:'A heavier ball has more energy. The wall takes 150 J and the rest turns into heat on the braking strip. A light ball cannot break the wall; a ball that is too heavy keeps so much energy that it drives through the garage.' },
+  { name:'Wall and hill', tags:'start',
+    task:'The ball must break the wall (60 J), get over the hill (3 m) and stop in the green band 3.4–3.9 m on the right ramp. Where do you release it?',
+    lesson:'The wall took 60 J. For a 2 kg ball that equals 60 / (2 · 9.81) ≈ 3.1 m of height, so it has to start about 3.1 m higher than where it should stop.' },
+  { name:'Energy budget', tags:'start + mass',
+    task:'You only have 100 J of potential energy. The hill is 4 m high and behind it the ball must stop in the band 4.5–5.1 m. Choose the mass and the start.',
+    lesson:'Ep = m·g·h. With the same energy a lighter ball gets higher: 100 J lifts a 2 kg ball to 5.1 m, but a 4 kg ball only to 2.5 m.' },
+  { name:'Speed trap', tags:'start + mass',
+    task:'There is a speed camera on the flat. The ball must pass at 24–30 km/h, ideally exactly 27 km/h. Set the start and, if you like, the mass.',
+    lesson:'The speed at the bottom depends only on the start height, not on the mass: a heavier ball has more energy, but it also needs more to get moving. And a start twice as high does not mean twice the speed.' },
+  { name:'Planets', tags:'planet',
+    task:'Height and mass are fixed. The wall holds 60 J; behind it are a braking strip and a garage. On which planet does the ball break the wall and stop in the garage?',
+    lesson:'Ep = m·g·h also depends on gravity. On the Moon and Mars the ball lacks the energy to break the wall; on Jupiter it keeps so much that it drives through the garage.' },
+  { name:'Moon pile driver', tags:'mass + height',
+    task:'The same stake, but on the Moon. Choose the mass of the weight and the drop height so that the head of the stake ends up in the green band.',
+    lesson:'Gravity on the Moon is six times weaker, so from the same height the weight has six times less energy. You need a much heavier weight.' },
+  { name:'Planet budget', tags:'planet + start',
+    task:'You only have 60 J and the ball weighs 1.5 kg. The hill is 4.5 m high; behind it stop the ball in the band 5.2–5.8 m. On Earth it is not enough. Choose a planet and the start.',
+    lesson:'With weaker gravity, less energy is needed for the same height: h = E / (m · g). On Earth 60 J gives only 4.1 m, on Mars almost 11 m.' },
+  { name:'Ski jump on planets', tags:'question',
+    task:'On Earth the ball hits the basket. On which planet does it hit it if you change nothing else? Answer first, then try it.',
+    hint:'On Jupiter the ball is faster at the edge, but it also falls to the ground faster. Which effect wins?',
+    options:['Only on the Moon','Only on Earth','Only on Jupiter','The same on all planets'],
+    lesson:'Gravity cancels out. Stronger gravity gives the ball more speed, but pulls it down just as much faster. The ball flies equally far on every planet, only in a different time.' },
+  { name:'Budget and wall', tags:'start + mass',
+    task:'Budget 150 J, wall 50 J, then a 4 m hill and a target band of 4.4–5.0 m. Find the mass and start that make it work.',
+    lesson:'Two things must hold at once: m·g·h ≤ 150 J and m·g·h − 50 J ≥ m·g·4 m. Only a 2 kg ball starting higher than about 6.6 m works.' },
+  { name:'Master courier', tags:'start + mass + friction',
+    task:'Break the wall (80 J) and then brake in the garage. Combine start, mass and friction.',
+    lesson:'All the energy from the start was split: 80 J went to the wall and the rest became heat while braking. No energy disappeared.' },
+];
+const lt = (f, lev) => { lev = lev || lv; const e = EN[LEVELS.indexOf(lev)]; return (lang === 'en' && e && e[f]) || lev[f]; };
 
 let L = 0, lv, track, m, g, slow = false, state = 'place', tries = 0, runT = 0;
 let radarV = null, vmax = 0, vmaxX = 0, vmaxY = 0, wallJ = 0, dropH = 0, sd = 0, phase = '', frics = [], basketA = 0, wallBroken = false, shards = [], demo = false, answered = false, apexH = null;
@@ -369,9 +427,9 @@ function myStars(){ const a = []; for (let i = 0; i < NL; i++) a.push(progress[i
 function updateCode(){
   const name = $('pname').value, arr = myStars(), done = arr.filter(x => x).length, st = arr.reduce((a, b) => a + b, 0);
   const miss = arr.map((x, i) => x ? null : i+1).filter(Boolean);
-  if (!normName(name)){ $('pcode').textContent = '—'; $('pinfo').textContent = 'Nejdřív napiš příjmení.'; return; }
+  if (!normName(name)){ $('pcode').textContent = '—'; $('pinfo').textContent = tx('Nejdřív napiš příjmení.', 'Type your surname first.'); return; }
   $('pcode').textContent = encode(name, arr);
-  $('pinfo').textContent = `Splněno ${done} z ${LEVELS.length} úrovní · hvězdy: ${st}` + (miss.length && miss.length < LEVELS.length ? ` · chybí: ${miss.join(', ')}` : '');
+  $('pinfo').textContent = tx(`Splněno ${done} z ${LEVELS.length} úrovní · hvězdy: ${st}`, `Completed ${done} of ${LEVELS.length} levels · stars: ${st}`) + (miss.length && miss.length < LEVELS.length ? tx(` · chybí: ${miss.join(', ')}`, ` · missing: ${miss.join(', ')}`) : '');
 }
 
 /* ---------- dráha ---------- */
@@ -399,13 +457,13 @@ function loadLevel(i){
   basketA = lv.goal.basket ? lv.goal.basket.a : 0;
   wallJ = lv.wall ? lv.wall.J : 0;
   if (lv.drop) dropH = lv.drop.h;
-  $('lvnum').textContent = `Úroveň ${i+1} / ${LEVELS.length}`;
-  $('lvname').textContent = lv.name; $('lvtask').textContent = lv.task;
+  $('lvnum').textContent = tx(`Úroveň ${i+1} / ${LEVELS.length}`, `Level ${i+1} / ${LEVELS.length}`);
+  $('lvname').textContent = lt('name'); $('lvtask').textContent = lt('task');
   demo = false; answered = false;
   const isQ = lv.goal.type === 'answer', best = progress[i] || 0;
-  $('starInfo').innerHTML = (isQ ? (lv.goal.kind === 'height' ? 'Hvězdy podle přesnosti odpovědi: ★★★ do 0,1 m · ★★ do 0,2 m · ★ do 0,3 m.' : 'Správná odpověď = ★★★.')
-    : 'Hvězdy podle přesnosti: ★★★ nejužší tmavý pruh · ★★ prostřední · ★ celý cíl.')
-    + ` Pokusů máš neomezeně. Úroveň můžeš přeskočit, ale bez hvězdy se nepočítá jako splněná. Nejlepší výsledek: ${starStr(best)}`;
+  $('starInfo').innerHTML = (isQ ? (lv.goal.kind === 'height' ? 'Hvězdy podle přesnosti odpovědi: ★★★ do 0,1 m · ★★ do 0,2 m · ★ do 0,3 m.' : tx('Správná odpověď = ★★★.', 'Correct answer = ★★★.'))
+    : tx('Hvězdy podle přesnosti: ★★★ nejužší tmavý pruh · ★★ prostřední · ★ celý cíl.', 'Stars for accuracy: ★★★ narrowest dark band · ★★ middle band · ★ whole target.'))
+    + tx(` Pokusů máš neomezeně. Úroveň můžeš přeskočit, ale bez hvězdy se nepočítá jako splněná. Nejlepší výsledek: ${starStr(best)}`, ` Unlimited attempts. You can skip a level, but without a star it does not count as completed. Best result: ${starStr(best)}`);
   buildAnswer();
   buildControls();
   place(sOfX(lv.start.x));
@@ -424,8 +482,8 @@ function buildAnswer(){
     const send = () => { const v = parseFloat($('ansIn').value.replace(',', '.')); if (isNaN(v)) return; submitAnswer(grade(v, ball.startH - lv.wall.J/(m*g), G.tol)); };
     $('ansGo').onclick = send; $('ansIn').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
   } else {
-    box.innerHTML = '<span class="label">Tvoje odpověď</span><div class="choices"></div>';
-    G.options.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o; b.onclick = () => submitAnswer(i === G.correct ? 3 : 0, b); box.lastChild.appendChild(b); });
+    box.innerHTML = tx('<span class="label">Tvoje odpověď</span><div class="choices"></div>', '<span class="label">Your answer</span><div class="choices"></div>');
+    tx(G.options, (EN[L] && EN[L].options) || G.options).forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o; b.onclick = () => submitAnswer(i === G.correct ? 3 : 0, b); box.lastChild.appendChild(b); });
   }
 }
 function submitAnswer(st, btn){
@@ -436,48 +494,48 @@ function submitAnswer(st, btn){
     progress[L] = Math.max(progress[L] || 0, st); save();
     if (btn) btn.setAttribute('aria-pressed', 'true');
     r.className = 'result win';
-    r.innerHTML = `<b>${st === 3 ? 'Přesně!' : 'Skoro!'} ${starStr(st)}</b>${st < 3 ? '<p>Odpověď je blízko, ale ne úplně přesná. Můžeš ji opravit a získat víc hvězd.</p>' : ''}<p>${lv.lesson}</p><p>Stiskni Pustit a ověř si to.</p>`;
-    $('go').disabled = false; $('hint').textContent = 'Stiskni Pustit a ověř si odpověď';
+    r.innerHTML = tx(`<b>${st === 3 ? 'Přesně!' : 'Skoro!'} ${starStr(st)}</b>${st < 3 ? '<p>Odpověď je blízko, ale ne úplně přesná. Můžeš ji opravit a získat víc hvězd.</p>' : ''}<p>${lt('lesson')}</p><p>Stiskni Pustit a ověř si to.</p>`, `<b>${st === 3 ? 'Exactly!' : 'Close!'} ${starStr(st)}</b>${st < 3 ? '<p>Your answer is close but not exact. You can correct it for more stars.</p>' : ''}<p>${lt('lesson')}</p><p>Press Release and check it.</p>`);
+    $('go').disabled = false; $('hint').textContent = tx('Stiskni Pustit a ověř si odpověď', 'Press Release to check your answer');
     $('next').hidden = L >= LEVELS.length-1; $('retry').hidden = true;
     renderLevels();
   } else {
     if (btn) btn.disabled = true;
     r.className = 'result lose';
-    r.innerHTML = `<b>To není správně</b><p>${tries >= 2 && lv.hint ? 'Nápověda: ' + lv.hint : 'Zkus to spočítat znovu.'}</p>`;
+    r.innerHTML = `<b>${tx('To není správně', 'Not correct')}</b><p>${tries >= 2 && lt('hint') ? tx('Nápověda: ', 'Hint: ') + lt('hint') : tx('Zkus to znovu.', 'Try again.')}</p>`;
   }
 }
 function buildControls(){
   const box = $('controls'); box.innerHTML = '';
   const add = html => { const d = document.createElement('div'); d.className = 'ctl'; d.innerHTML = html; box.appendChild(d); return d; };
-  if (lv.start.range) add('<div class="top"><span>Start kuličky</span><output>táhni po modré</output></div>');
-  if (lv.drop) add('<div class="top"><span>Výška pádu</span><output>táhni závaží nahoru a dolů</output></div>');
+  if (lv.start.range) add(tx('<div class="top"><span>Start kuličky</span><output>táhni po modré</output></div>', '<div class="top"><span>Ball start</span><output>drag along the blue part</output></div>'));
+  if (lv.drop) add(tx('<div class="top"><span>Výška pádu</span><output>táhni závaží nahoru a dolů</output></div>', '<div class="top"><span>Drop height</span><output>drag the weight up and down</output></div>'));
   if (lv.wall && lv.wall.adj){
     const w = lv.wall.adj;
-    const d = add(`<div class="top"><label for="wj">Pevnost zdi</label><output id="wjOut">${wallJ} J</output></div><input type="range" id="wj" min="${w[0]}" max="${w[1]}" step="${w[2]}" value="${wallJ}">`);
+    const d = add(`<div class="top"><label for="wj">${tx('Pevnost zdi', 'Wall strength')}</label><output id="wjOut">${wallJ} J</output></div><input type="range" id="wj" min="${w[0]}" max="${w[1]}" step="${w[2]}" value="${wallJ}">`);
     d.querySelector('input').oninput = e => { if (busy()) { e.target.value = wallJ; return; } wallJ = +e.target.value; $('wjOut').textContent = wallJ + ' J'; if (state === 'done') resetAfterLose(); else updateReadouts(); };
   }
   if (mOpts()){
-    const d = add('<div class="top"><span>Hmotnost</span></div><div class="row"></div>');
+    const d = add(tx('<div class="top"><span>Hmotnost</span></div><div class="row"></div>', '<div class="top"><span>Mass</span></div><div class="row"></div>'));
     lv.m.options.forEach(v => { const b = document.createElement('button'); b.type = 'button'; b.textContent = v + ' kg'; b.setAttribute('aria-pressed', v === m);
       b.onclick = () => { if (busy()) return; m = v; [...b.parentNode.children].forEach(x => x.setAttribute('aria-pressed', x === b)); place(ball.s); };
       d.lastChild.appendChild(b); });
   }
   if (gOpts()){
-    const d = add('<div class="top"><span>Planeta</span><output id="gOut"></output></div><div class="row"></div>');
-    lv.g.options.forEach(p => { const b = document.createElement('button'); b.type = 'button'; b.textContent = p; b.setAttribute('aria-pressed', PLANETS[p] === g);
+    const d = add(tx('<div class="top"><span>Planeta</span><output id="gOut"></output></div><div class="row"></div>', '<div class="top"><span>Planet</span><output id="gOut"></output></div><div class="row"></div>'));
+    lv.g.options.forEach(p => { const b = document.createElement('button'); b.type = 'button'; b.textContent = pn(p); b.setAttribute('aria-pressed', PLANETS[p] === g);
       b.onclick = () => { if (busy()) return; g = PLANETS[p]; [...b.parentNode.children].forEach(x => x.setAttribute('aria-pressed', x === b)); place(ball.s); };
       d.lastChild.appendChild(b); });
   }
   frics.forEach((f, i) => { if (!f.adj) return;
-    const d = add(`<div class="top"><label for="mu${i}">Tření brzdného pásu</label><output id="muOut${i}">${fmt(f.mu,2)}</output></div><input type="range" id="mu${i}" min="${f.adj[0]}" max="${f.adj[1]}" step="${f.adj[2]}" value="${f.mu}">`);
+    const d = add(`<div class="top"><label for="mu${i}">${tx('Tření brzdného pásu', 'Braking strip friction')}</label><output id="muOut${i}">${fmt(f.mu,2)}</output></div><input type="range" id="mu${i}" min="${f.adj[0]}" max="${f.adj[1]}" step="${f.adj[2]}" value="${f.mu}">`);
     d.querySelector('input').oninput = e => { if (busy()) { e.target.value = f.mu; return; } f.mu = +e.target.value; $('muOut'+i).textContent = fmt(f.mu,2); resetAfterLose(); };
   });
   const bk = lv.goal.basket;
   if (bk && bk.adj){
-    const d = add(`<div class="top"><label for="bk">Poloha košíku</label><output id="bkOut"></output></div><input type="range" id="bk" min="${bk.adj[0]}" max="${bk.adj[1]}" step="${bk.adj[2]}" value="${basketA}">`);
+    const d = add(`<div class="top"><label for="bk">${tx('Poloha košíku', 'Basket position')}</label><output id="bkOut"></output></div><input type="range" id="bk" min="${bk.adj[0]}" max="${bk.adj[1]}" step="${bk.adj[2]}" value="${basketA}">`);
     d.querySelector('input').oninput = e => { if (busy()) { e.target.value = basketA; return; } basketA = +e.target.value; updateReadouts(); resetAfterLose(); };
   }
-  if (!box.children.length) add('<span>nic</span>');
+  if (!box.children.length) add(tx('<span>nic</span>', '<span>nothing</span>'));
 }
 const busy = () => state === 'run' || state === 'fly';
 function resetAfterLose(){ if (state === 'done'){ const t = tries; place(ball.startS); tries = t; updateReadouts(); } }
@@ -492,7 +550,7 @@ function place(s){
     ball.E0 = ball.Em = m*g*dropH; resetSpeed();
     state = 'place'; apexH = null;
     $('result').hidden = true; $('next').hidden = true; $('retry').hidden = true; $('go').disabled = false;
-    $('hint').textContent = 'Táhni závaží nahoru nebo dolů a stiskni Pustit';
+    $('hint').textContent = tx('Táhni závaží nahoru nebo dolů a stiskni Pustit', 'Drag the weight up or down and press Release');
     updateReadouts(); return;
   }
   s = Math.max(sMin(), Math.min(sMax(), s));
@@ -504,35 +562,35 @@ function place(s){
   apexH = null;
   if (!(isAnswer() && answered)){ $('result').hidden = true; $('next').hidden = true; $('retry').hidden = true; }
   $('go').disabled = isAnswer() && !answered;
-  $('hint').textContent = isAnswer() ? (answered ? 'Stiskni Pustit a ověř si odpověď' : 'Nejdřív odpověz na otázku') : lv.start.range ? 'Posuň kuličku po modré části a stiskni Pustit' : 'Kulička je pevně na místě. Změň něco jiného.';
+  $('hint').textContent = isAnswer() ? (answered ? tx('Stiskni Pustit a ověř si odpověď', 'Press Release to check your answer') : tx('Nejdřív odpověz na otázku', 'Answer the question first')) : lv.start.range ? tx('Posuň kuličku po modré části a stiskni Pustit', 'Slide the ball along the blue part and press Release') : tx('Kulička je pevně na místě. Změň něco jiného.', 'The ball is fixed. Change something else.');
   updateReadouts();
 }
-function resetSpeed(){ vmax = 0; if ($('rVmax')) $('rVmax').textContent = '–'; }
+function resetSpeed(){ vmax = 0; }
 function updateReadouts(){
   const f = $('fixed'); const rows = [];
-  rows.push([lv.drop ? 'Výška pádu (spodek závaží)' : 'Výška startu', fmt(ball.startH) + ' m' + (lv.start.range || lv.drop ? '' : ' (pevná)')]);
-  if (!mOpts()) rows.push(['Hmotnost', fmt(m) + ' kg']); else rows.push(['Zvolená hmotnost', fmt(m) + ' kg']);
-  if (!gOpts()) rows.push(['Gravitace', fmt(g,2) + ' N/kg (' + planetOf(g) + ')']); else rows.push(['Gravitace', fmt(g,2) + ' N/kg']);
-  frics.forEach(fr => { if (!fr.adj) rows.push(['Tření pásu', fmt(fr.mu,2)]); });
-  if (!frics.length) rows.push(['Tření', 'žádné']);
-  if (lv.wall && !lv.wall.adj) rows.push(['Zeď vydrží', wallJ + ' J']);
-  if (lv.drop) rows.push(['Odpor půdy', lv.drop.F + ' N']);
-  if (lv.budget) rows.push(['Rozpočet energie', lv.budget + ' J']);
-  if (lv.goal.basket) rows.push(['Košík', fmt(basketA) + '–' + fmt(basketA + lv.goal.basket.w) + ' m']);
+  rows.push([lv.drop ? tx('Výška pádu (spodek závaží)', 'Drop height (bottom of weight)') : tx('Výška startu', 'Start height'), fmt(ball.startH) + ' m' + (lv.start.range || lv.drop ? '' : tx(' (pevná)', ' (fixed)'))]);
+  if (!mOpts()) rows.push([tx('Hmotnost', 'Mass'), fmt(m) + ' kg']); else rows.push([tx('Zvolená hmotnost', 'Chosen mass'), fmt(m) + ' kg']);
+  if (!gOpts()) rows.push([tx('Gravitace', 'Gravity'), fmt(g,2) + ' N/kg (' + pn(planetOf(g)) + ')']); else rows.push([tx('Gravitace', 'Gravity'), fmt(g,2) + ' N/kg']);
+  frics.forEach(fr => { if (!fr.adj) rows.push([tx('Tření pásu', 'Strip friction'), fmt(fr.mu,2)]); });
+  if (!frics.length) rows.push([tx('Tření', 'Friction'), tx('žádné', 'none')]);
+  if (lv.wall && !lv.wall.adj) rows.push([tx('Zeď vydrží', 'Wall holds'), wallJ + ' J']);
+  if (lv.drop) rows.push([tx('Odpor půdy', 'Soil resistance'), lv.drop.F + ' N']);
+  if (lv.budget) rows.push([tx('Rozpočet energie', 'Energy budget'), lv.budget + ' J']);
+  if (lv.goal.basket) rows.push([tx('Košík', 'Basket'), fmt(basketA) + '–' + fmt(basketA + lv.goal.basket.w) + ' m']);
   f.innerHTML = rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
   if ($('gOut')) $('gOut').textContent = 'g = ' + fmt(g,2);
   if ($('bkOut')) $('bkOut').textContent = fmt(basketA) + ' m';
-  $('rEp').textContent = Math.round(m*g*ball.startH) + ' J' + (lv.budget ? ` z ${lv.budget} J` : '');
+  $('rEp').textContent = Math.round(m*g*ball.startH) + ' J' + (lv.budget ? tx(` z ${lv.budget} J`, ` of ${lv.budget} J`) : '');
   $('rTries').textContent = tries;
 }
 function go(){
   if (isAnswer()){ if (!answered) return; if (state === 'done') place(ball.startS); demo = true; }
   if (state !== 'place') return;
   if (!demo){ tries++; updateReadouts(); }
-  if (lv.drop){ ball.vy = 0; ball.dy = dropH; sd = 0; phase = 'fall'; ball.E0 = m*g*dropH; runT = 0; state = 'run'; $('go').disabled = true; $('hint').textContent = 'Závaží padá…'; return; }
+  if (lv.drop){ ball.vy = 0; ball.dy = dropH; sd = 0; phase = 'fall'; ball.E0 = m*g*dropH; runT = 0; state = 'run'; $('go').disabled = true; $('hint').textContent = tx('Závaží padá…', 'The weight is falling…'); return; }
   ball.E0 = ball.Em = m*g*ball.startH; ball.traveled = 0; ball.loss = 0; runT = 0;
   ball.dir = slopeAt(ball.s) > 0 ? -1 : 1;
-  state = 'run'; $('go').disabled = true; $('hint').textContent = 'Kulička jede…';
+  state = 'run'; $('go').disabled = true; $('hint').textContent = tx('Kulička jede…', 'The ball is rolling…');
 }
 
 /* ---------- vyhodnocení ---------- */
@@ -541,33 +599,33 @@ function finish(win, msg, st = 3, detail = ''){
   state = 'done';
   if (demo){
     $('go').disabled = false;
-    $('hint').textContent = apexH != null ? `Kulička vyjela do ${fmt(apexH)} m` : win ? 'Trefa! Zkus jinou planetu.' : (msg || 'Hotovo');
+    $('hint').textContent = apexH != null ? tx(`Kulička vyjela do ${fmt(apexH)} m`, `The ball rose to ${fmt(apexH)} m`) : win ? tx('Trefa! Zkus jinou planetu.', 'Hit! Try another planet.') : (msg || tx('Hotovo', 'Done'));
     return;
   }
   const r = $('result'); r.hidden = false; r.className = 'result ' + (win ? 'win' : 'lose');
   if (win){
     progress[L] = Math.max(progress[L] || 0, st); save();
     $('retry').hidden = st === 3;
-    const word = st === 3 ? 'Přesně do středu!' : st === 2 ? 'Doručeno, skoro přesně.' : 'Doručeno, ale jen na kraj.';
-    r.innerHTML = `<b>${word} ${starStr(st)}</b>${detail ? `<p>${detail}</p>` : ''}${st < 3 ? '<p>Pro víc hvězd se trefi do užšího, tmavšího pruhu.</p>' : ''}<p>${lv.lesson}</p>`;
-    $('next').hidden = L >= LEVELS.length-1; $('hint').textContent = 'Hotovo!';
+    const word = st === 3 ? tx('Přesně do středu!', 'Right in the middle!') : st === 2 ? tx('Doručeno, skoro přesně.', 'Delivered, almost exact.') : tx('Doručeno, ale jen na kraj.', 'Delivered, but only at the edge.');
+    r.innerHTML = `<b>${word} ${starStr(st)}</b>${detail ? `<p>${detail}</p>` : ''}${st < 3 ? tx('<p>Pro víc hvězd se trefi do užšího, tmavšího pruhu.</p>', '<p>For more stars, hit the narrower, darker band.</p>') : ''}<p>${lt('lesson')}</p>`;
+    $('next').hidden = L >= LEVELS.length-1; $('hint').textContent = tx('Hotovo!', 'Done!');
     renderLevels();
   } else {
-    r.innerHTML = `<b>Nedoručeno</b><p>${msg}</p>`;
-    $('hint').textContent = 'Uprav nastavení a zkus to znovu';
+    r.innerHTML = `<b>${tx('Nedoručeno', 'Not delivered')}</b><p>${msg}</p>`;
+    $('hint').textContent = tx('Uprav nastavení a zkus to znovu', 'Adjust the settings and try again');
     setTimeout(() => { if (state === 'done' && r.classList.contains('lose')){ const t = tries; const keep = r.innerHTML; place(ball.startS); tries = t; updateReadouts(); r.hidden = false; r.className = 'result lose'; r.innerHTML = keep; } }, 1800);
   }
 }
-const energyWord = low => low ? 'měla málo energie' : 'měla energie moc';
+const energyWord = low => low ? tx('měla málo energie', 'had too little energy') : tx('měla energie moc', 'had too much energy');
 function onTurn(x, h){
   const G = lv.goal;
   if (G.type === 'answer' && G.kind === 'height' && x > G.sideX){ apexH = h; finish(true); return; }
   if (G.type === 'apex'){
     const [a,b] = G.zone;
     const c0 = (a+b)/2, st = grade(h, c0, (b-a)/2);
-    if (x <= G.sideX) finish(false, `Kulička se otočila ve výšce ${fmt(h)} m ještě před cílovou rampou. Měla málo energie.`);
-    else if (st) finish(true, '', st, `Kulička vyjela do ${fmt(h,2)} m, střed cíle je ${fmt(c0,2)} m.`);
-    else finish(false, `Kulička se zastavila ve výšce ${fmt(h)} m, cíl je ${fmt(a)}–${fmt(b)} m. Kulička ${energyWord(h < a)}.`);
+    if (x <= G.sideX) finish(false, tx(`Kulička se otočila ve výšce ${fmt(h)} m ještě před cílovou rampou. Měla málo energie.`, `The ball turned back at ${fmt(h)} m before reaching the target ramp. It had too little energy.`));
+    else if (st) finish(true, '', st, tx(`Kulička vyjela do ${fmt(h,2)} m, střed cíle je ${fmt(c0,2)} m.`, `The ball rose to ${fmt(h,2)} m, the target centre is ${fmt(c0,2)} m.`));
+    else finish(false, tx(`Kulička se zastavila ve výšce ${fmt(h)} m, cíl je ${fmt(a)}–${fmt(b)} m. Kulička ${energyWord(h < a)}.`, `The ball stopped at ${fmt(h)} m, the target is ${fmt(a)}–${fmt(b)} m. The ball ${energyWord(h < a)}.`));
   }
   if (G.type === 'pass' && x < G.x) finish(false, `Kulička se otočila ve výšce ${fmt(h)} m a do cíle nedojela.`);
 }
@@ -576,10 +634,10 @@ function onRest(x){
   if (G.type === 'stop'){
     const [a,b] = G.zone;
     const c0 = (a+b)/2, st = grade(x, c0, (b-a)/2);
-    if (st) finish(true, '', st, `Kulička zastavila na ${fmt(x,2)} m, střed garáže je ${fmt(c0,2)} m.`);
-    else finish(false, `Kulička zastavila na ${fmt(x)} m, garáž je na ${fmt(a)}–${fmt(b)} m. Brzdila ${x < a ? 'moc' : 'málo'}.`);
+    if (st) finish(true, '', st, tx(`Kulička zastavila na ${fmt(x,2)} m, střed garáže je ${fmt(c0,2)} m.`, `The ball stopped at ${fmt(x,2)} m, the garage centre is ${fmt(c0,2)} m.`));
+    else finish(false, tx(`Kulička zastavila na ${fmt(x)} m, garáž je na ${fmt(a)}–${fmt(b)} m. Brzdila ${x < a ? 'moc' : 'málo'}.`, `The ball stopped at ${fmt(x)} m, the garage is at ${fmt(a)}–${fmt(b)} m. It braked too ${x < a ? 'much' : 'little'}.`));
   } else if (G.type === 'pass') finish(false, 'Kulička zůstala stát na vrcholu. Chybělo jen trochu energie.');
-  else finish(false, 'Kulička se zastavila.');
+  else finish(false, tx('Kulička se zastavila.', 'The ball stopped.'));
 }
 
 /* ---------- fyzika ---------- */
@@ -597,8 +655,8 @@ function stepDrop(dt){
       ball.dy = D.top - sd;
       if (v === 0){
         const [za, zb] = lv.goal.zone, c0 = (za+zb)/2, top = D.top - sd, st = grade(top, c0, (zb-za)/2);
-        if (st) finish(true, '', st, `Hlava kolíku skončila ve výšce ${fmt(top,2)} m, střed pásma je ${fmt(c0,2)} m.`);
-        else finish(false, top < za ? `Kolík je zatlučený moc hluboko (hlava ve výšce ${fmt(top,2)} m). Závaží mělo energie moc.` : `Kolík je zatlučený málo (hlava ve výšce ${fmt(top,2)} m). Závaží mělo energie málo.`);
+        if (st) finish(true, '', st, tx(`Hlava kolíku skončila ve výšce ${fmt(top,2)} m, střed pásma je ${fmt(c0,2)} m.`, `The head of the stake ended at ${fmt(top,2)} m, the band centre is ${fmt(c0,2)} m.`));
+        else finish(false, top < za ? tx(`Kolík je zatlučený moc hluboko (hlava ve výšce ${fmt(top,2)} m). Závaží mělo energie moc.`, `The stake went in too deep (head at ${fmt(top,2)} m). The weight had too much energy.`) : tx(`Kolík je zatlučený málo (hlava ve výšce ${fmt(top,2)} m). Závaží mělo energie málo.`, `The stake did not go in deep enough (head at ${fmt(top,2)} m). The weight had too little energy.`));
         return;
       }
     }
@@ -610,7 +668,7 @@ function step(dt){
   if (state === 'fly') return stepFly(dt);
   if (state !== 'run') return;
   runT += dt;
-  if (runT > 40){ finish(false, 'Kulička pořád jezdí sem a tam. Bez tření nikdy nezastaví.'); return; }
+  if (runT > 40){ finish(false, tx('Kulička pořád jezdí sem a tam. Bez tření nikdy nezastaví.', 'The ball keeps rolling back and forth. Without friction it never stops.')); return; }
   const n = 16, h = dt/n;
   for (let k = 0; k < n && state === 'run'; k++){
     const hs = hAt(ball.s), v2 = 2*(ball.Em/m - g*hs);
@@ -628,7 +686,7 @@ function step(dt){
     if (lv.wall && !wallBroken && ball.dir > 0 && xAt(ns) + R >= lv.wall.x){
       const ek = ball.Em - m*g*hs;
       if (ek >= wallJ){ wallBroken = true; ball.Em -= wallJ; ball.loss += wallJ; burst(); }
-      else { finish(false, `Náraz měl jen ${Math.round(ek)} J pohybové energie, zeď vydrží ${wallJ} J. Kulička se odrazila.`); return; }
+      else { finish(false, tx(`Náraz měl jen ${Math.round(ek)} J pohybové energie, zeď vydrží ${wallJ} J. Kulička se odrazila.`, `The impact had only ${Math.round(ek)} J of kinetic energy, the wall holds ${wallJ} J. The ball bounced back.`)); return; }
     }
     if (ns <= 0 || ns >= track.L){ ns = Math.max(0, Math.min(track.L, ns)); ball.dir *= -1; }
     if (2*(ball.Em/m - g*hAt(ns)) < 0){
@@ -644,11 +702,11 @@ function step(dt){
     if (lv.goal.type === 'radar' && ball.dir > 0 && x >= lv.goal.x){
       const kmh = Math.sqrt(Math.max(0, 2*(ball.Em/m - g*hAt(ns))))*3.6, [za, zb] = lv.goal.zone, c0 = (za+zb)/2;
       radarV = kmh; const st = grade(kmh, c0, (zb-za)/2);
-      if (st) finish(true, '', st, `Radar naměřil ${fmt(kmh)} km/h, cíl je ${fmt(c0,0)} km/h.`);
-      else finish(false, `Radar naměřil ${fmt(kmh)} km/h, povoleno je ${za}–${zb} km/h. Kulička jela moc ${kmh < za ? 'pomalu' : 'rychle'}.`);
+      if (st) finish(true, '', st, tx(`Radar naměřil ${fmt(kmh)} km/h, cíl je ${fmt(c0,0)} km/h.`, `The radar measured ${fmt(kmh)} km/h, the target is ${fmt(c0,0)} km/h.`));
+      else finish(false, tx(`Radar naměřil ${fmt(kmh)} km/h, povoleno je ${za}–${zb} km/h. Kulička jela moc ${kmh < za ? 'pomalu' : 'rychle'}.`, `The radar measured ${fmt(kmh)} km/h, allowed is ${za}–${zb} km/h. The ball was too ${kmh < za ? 'slow' : 'fast'}.`));
       return;
     }
-    if (lv.goal.type === 'stop' && x > lv.goal.zone[1] + 0.3) { finish(false, 'Kulička projela garáží. Brzdila málo, nebo měla energie moc.'); return; }
+    if (lv.goal.type === 'stop' && x > lv.goal.zone[1] + 0.3) { finish(false, tx('Kulička projela garáží. Brzdila málo, nebo měla energie moc.', 'The ball drove through the garage. It braked too little or had too much energy.')); return; }
   }
 }
 function launch(v){
@@ -665,10 +723,10 @@ function stepFly(dt){
     const c0 = (a+bb)/2, half = b.w/2 + R*0.6;
     if (py >= b.y + R && ball.fy < b.y + R){
       const st = grade(ball.fx, c0, half);
-      if (st){ const lx = ball.fx; ball.fy = R + 0.05; ball.fx = Math.min(bb - R*0.5, Math.max(a + R*0.5, lx)); finish(true, '', st, `Kulička přiletěla na ${fmt(lx,2)} m, střed košíku je ${fmt(c0,2)} m.`); return; }
+      if (st){ const lx = ball.fx; ball.fy = R + 0.05; ball.fx = Math.min(bb - R*0.5, Math.max(a + R*0.5, lx)); finish(true, '', st, tx(`Kulička přiletěla na ${fmt(lx,2)} m, střed košíku je ${fmt(c0,2)} m.`, `The ball landed at ${fmt(lx,2)} m, the basket centre is ${fmt(c0,2)} m.`)); return; }
     }
-    if (ball.fy <= R){ ball.fy = R; finish(false, `Kulička dopadla na ${fmt(ball.fx)} m, košík byl na ${fmt(a)}–${fmt(bb)} m.`); return; }
-    if (ball.fx > W + 1){ finish(false, 'Kulička přeletěla celou plochu.'); return; }
+    if (ball.fy <= R){ ball.fy = R; finish(false, tx(`Kulička dopadla na ${fmt(ball.fx)} m, košík byl na ${fmt(a)}–${fmt(bb)} m.`, `The ball landed at ${fmt(ball.fx)} m, the basket was at ${fmt(a)}–${fmt(bb)} m.`)); return; }
+    if (ball.fx > W + 1){ finish(false, tx('Kulička přeletěla celou plochu.', 'The ball flew over the whole area.')); return; }
   }
 }
 function burst(){
@@ -728,12 +786,12 @@ function draw(){
     for (let v = 0; v <= 50; v += 10) ctx.fillText(String(v), X(sc(v)) - 6, Y(sy - 0.25));
     if (radarV != null){ ctx.fillStyle = c.ek; ctx.fillRect(X(sc(radarV)) - 2, Y(sy + 0.6), 4, 0.8*k); ctx.font = font(700,.26); ctx.fillText(fmt(radarV) + ' km/h', X(sc(radarV)) - 30, Y(sy + 0.8)); }
   }
-  if (G.type === 'pass'){ ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(G.x), 0, cw - X(G.x), ch); ctx.fillStyle = c.goal; ctx.font = font(700,.28); ctx.fillText('CÍL', X(G.x) + 8, 22); }
+  if (G.type === 'pass'){ ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(G.x), 0, cw - X(G.x), ch); ctx.fillStyle = c.goal; ctx.font = font(700,.28); ctx.fillText(tx('CÍL', 'GOAL'), X(G.x) + 8, 22); }
   if (G.type === 'stop'){
     const [a,b] = G.zone, c0 = (a+b)/2, hf = (b-a)/2;
     BANDS.forEach(f => { ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(c0 - hf*f), Y(2.4), (X(c0 + hf*f) - X(c0 - hf*f)), Y(0.6)-Y(2.4)); });
     ctx.strokeStyle = c.goal; ctx.lineWidth = 2; ctx.strokeRect(X(a), Y(2.4), X(b)-X(a), Y(0.6)-Y(2.4));
-    ctx.fillStyle = c.goal; ctx.font = font(700,.24); ctx.fillText(G.label, X(a) + 6, Y(2.4) + 18);
+    ctx.fillStyle = c.goal; ctx.font = font(700,.24); ctx.fillText(tx(G.label, 'GARAGE'), X(a) + 6, Y(2.4) + 18);
   }
   if (G.basket){
     const b = G.basket, a = basketA, bb = a + b.w;
@@ -752,7 +810,7 @@ function draw(){
   // tření
   frics.forEach(f => {
     pathTrack(f.a, f.b); ctx.strokeStyle = c.heat; ctx.globalAlpha = Math.min(1, 0.25 + f.mu*1.2); ctx.lineWidth = Math.max(6, k*0.2); ctx.stroke(); ctx.globalAlpha = 1;
-    ctx.fillStyle = c.heat; ctx.font = font(600,.22); ctx.fillText('tření ' + fmt(f.mu,2), X(f.a) + 6, Y(hAt(sOfX(f.a))) + Math.max(18, k*.42));
+    ctx.fillStyle = c.heat; ctx.font = font(600,.22); ctx.fillText(tx('tření ', 'friction ') + fmt(f.mu,2), X(f.a) + 6, Y(hAt(sOfX(f.a))) + Math.max(18, k*.42));
   });
   // rozsah startu
   if (lv.start.range){ pathTrack(lv.start.range[0], lv.start.range[1]); ctx.strokeStyle = c.ep; ctx.globalAlpha = .45; ctx.lineWidth = Math.max(7, k*0.2); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -764,13 +822,13 @@ function draw(){
       for (let r = 0; r < 4; r++) for (let q = 0; q < 1; q++){
         ctx.fillStyle = c.brick; ctx.fillRect(X(w.x), Y(base + (r+1)*bh), bw*k - 1, bh*k - 2);
       }
-      ctx.fillStyle = c.brick; ctx.font = font(700,.24); ctx.fillText('zeď ' + wallJ + ' J', X(w.x) - 0.2*k, Y(base + 1.4));
+      ctx.fillStyle = c.brick; ctx.font = font(700,.24); ctx.fillText(tx('zeď ', 'wall ') + wallJ + ' J', X(w.x) - 0.2*k, Y(base + 1.4));
     }
     shards.forEach(p => { ctx.save(); ctx.translate(X(p.x), Y(p.y)); ctx.rotate(p.r); ctx.fillStyle = c.brick; ctx.fillRect(-0.07*k, -0.05*k, 0.14*k, 0.1*k); ctx.restore(); });
   }
-  if (lv.budget) hline(c, hCap(), c.bad, `strop rozpočtu ${fmt(hCap())} m`, [3,4]);
+  if (lv.budget) hline(c, hCap(), c.bad, tx(`strop rozpočtu ${fmt(hCap())} m`, `budget limit ${fmt(hCap())} m`), [3,4]);
   hline(c, ball.startH, c.ep, 'start ' + fmt(ball.startH) + ' m', [8,6]);
-  if (apexH != null) hline(c, apexH, c.goal, 'vyjela do ' + fmt(apexH) + ' m', [2,4]);
+  if (apexH != null) hline(c, apexH, c.goal, tx('vyjela do ', 'rose to ') + fmt(apexH) + ' m', [2,4]);
 
   // kulička
   let bx, by;
@@ -786,7 +844,6 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(X(bx), Y(by)); ctx.lineTo(X(bx) + Math.cos(ball.angle)*r*.8, Y(by) + Math.sin(ball.angle)*r*.8); ctx.stroke();
   ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(X(bx)-r*.3, Y(by)-r*.3, r*.28, 0, Math.PI*2); ctx.fillStyle = c['ball-hi']; ctx.fill(); ctx.globalAlpha = 1;
   if (mOpts()){ ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.2)}px "IBM Plex Mono", monospace`; ctx.fillText(m + ' kg', X(bx) + r + 4, Y(by) - r); }
-  drawSpeedPhoto(c);
 }
 
 function drawBall(c, bx, by){
@@ -802,11 +859,11 @@ function drawDrop(c, cw, ch){
   ctx.fillStyle = c['track-fill']; ctx.fillRect(0, Y(D.ground), cw, ch - Y(D.ground));
   ctx.fillStyle = c['track-fill']; ctx.fillRect(0, Y(D.ground), cw, ch - Y(D.ground));
   ctx.strokeStyle = c.ink; ctx.lineWidth = Math.max(3, k*0.09); ctx.beginPath(); ctx.moveTo(0, Y(D.ground)); ctx.lineTo(cw, Y(D.ground)); ctx.stroke();
-  ctx.fillStyle = c.muted; ctx.font = font(600,.22); ctx.fillText('půda, odpor ' + D.F + ' N', 8, Y(D.ground) + Math.max(18, k*.42));
+  ctx.fillStyle = c.muted; ctx.font = font(600,.22); ctx.fillText(tx('půda, odpor ', 'soil, resistance ') + D.F + ' N', 8, Y(D.ground) + Math.max(18, k*.42));
   // cílové pásmo pro hlavu kolíku
   const [za, zb] = lv.goal.zone, c0 = (za+zb)/2, hf = (zb-za)/2;
   BANDS.forEach(f => { ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(x - 1.4), Y(c0 + hf*f), X(x + 1.4) - X(x - 1.4), Y(c0 - hf*f) - Y(c0 + hf*f)); });
-  ctx.fillStyle = c.goal; ctx.font = font(700,.22); ctx.fillText('cíl pro hlavu kolíku', X(x + 1.5), Y(c0) + 5);
+  ctx.fillStyle = c.goal; ctx.font = font(700,.22); ctx.fillText(tx('cíl pro hlavu kolíku', 'target for the stake head'), X(x + 1.5), Y(c0) + 5);
   // kolík
   ctx.fillStyle = c.brick; ctx.beginPath();
   ctx.moveTo(X(x - 0.15), Y(top)); ctx.lineTo(X(x + 0.15), Y(top)); ctx.lineTo(X(x + 0.15), Y(tip + 0.25)); ctx.lineTo(X(x), Y(tip)); ctx.lineTo(X(x - 0.15), Y(tip + 0.25)); ctx.closePath(); ctx.fill();
@@ -816,14 +873,13 @@ function drawDrop(c, cw, ch){
   ctx.strokeStyle = c.muted; ctx.lineWidth = Math.max(3, k*0.07);
   ctx.beginPath(); ctx.moveTo(X(px), Y(D.ground)); ctx.lineTo(X(px), Y(armY)); ctx.lineTo(X(x - 0.3), Y(armY)); ctx.stroke();
   // výšky
-  hline(c, dropH, c.ep, 'pád z ' + fmt(dropH) + ' m', [8,6]);
+  hline(c, dropH, c.ep, tx('pád z ', 'drop from ') + fmt(dropH) + ' m', [8,6]);
   ctx.setLineDash([3,4]); ctx.strokeStyle = c.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Y(D.top)); ctx.lineTo(X(x - 0.3), Y(D.top)); ctx.stroke(); ctx.setLineDash([]);
   // závaží
   const by = ball.dy + R*Math.min(1.6, 0.8 + m*0.08);
   if (state === 'place' || phase === ''){ ctx.strokeStyle = c.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(x), Y(armY)); ctx.lineTo(X(x), Y(by)); ctx.stroke(); }
   drawBall(c, x, by);
   shards.forEach(p => { ctx.fillStyle = c.muted; ctx.fillRect(X(p.x), Y(p.y), 0.08*k, 0.08*k); });
-  drawSpeedPhoto(c);
 }
 function speedNow(){
   if (lv.drop) return { v: Math.abs(ball.vy), x: lv.drop.x, y: ball.dy + R*Math.min(1.6, 0.8 + m*0.08) };
@@ -834,7 +890,7 @@ function trackSpeed(){
   const sp = speedNow(), moving = state === 'run' || state === 'fly';
   const shown = moving ? sp.v : 0;
   $('rV').textContent = Math.round(shown*3.6) + ' km/h';
-  if (moving && sp.v > vmax){ vmax = sp.v; vmaxX = sp.x; vmaxY = sp.y; $('rVmax').textContent = Math.round(vmax*3.6) + ' km/h'; }
+  if (moving && sp.v > vmax){ vmax = sp.v; vmaxX = sp.x; vmaxY = sp.y; }
 }
 function drawSpeedPhoto(c){
   if (vmax < 0.5 || state === 'place') return;
@@ -868,7 +924,7 @@ function renderLevels(){
   LEVELS.forEach((l, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'lv'; b.setAttribute('aria-pressed', i === L);
     const st = progress[i] || 0;
-    b.innerHTML = `<span>${i+1}. ${l.name}</span><span class="tags">mění se: ${l.tags}</span><small class="stars">${st ? '★'.repeat(st) + '☆'.repeat(3-st) : '☆☆☆'}</small>`;
+    b.innerHTML = `<span>${i+1}. ${lt('name', l)}</span><span class="tags">${tx('mění se: ', 'changes: ')}${lt('tags', l)}</span><small class="stars">${st ? '★'.repeat(st) + '☆'.repeat(3-st) : '☆☆☆'}</small>`;
     b.onclick = () => loadLevel(i); nav.appendChild(b);
   });
   updateCode();
@@ -887,7 +943,7 @@ $('tgo').onclick = () => {
     const name = m ? m[1].trim() : line, code = m ? m[2] : '';
     const r = m ? decode(name, code) : null;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${esc(plain(name))}</td><td><code>${esc(code)}</code></td><td>${r ? r.done + ' / ' + LEVELS.length : '–'}</td><td>${r ? r.stars + ' / ' + 3*LEVELS.length : '–'}</td><td>${r ? (r.missing.length ? r.missing.join(', ') : 'nic, vše splněno') : '–'}</td><td><code>${r ? r.per.map(x => x || '·').join(' ') : '–'}</code></td><td class="${r ? 'ok' : 'bad'}">${r ? 'platný' : 'neplatný'}</td>`;
+    tr.innerHTML = `<td>${esc(plain(name))}</td><td><code>${esc(code)}</code></td><td>${r ? r.done + ' / ' + LEVELS.length : '–'}</td><td>${r ? r.stars + ' / ' + 3*LEVELS.length : '–'}</td><td>${r ? (r.missing.length ? r.missing.join(', ') : tx('nic, vše splněno', 'none, all done')) : '–'}</td><td><code>${r ? r.per.map(x => x || '·').join(' ') : '–'}</code></td><td class="${r ? 'ok' : 'bad'}">${r ? tx('platný', 'valid') : tx('neplatný', 'invalid')}</td>`;
     tb.appendChild(tr);
   });
   $('tout').hidden = !rows.length;
@@ -931,6 +987,16 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
+const I18N = {"go": ["Pustit!", "Release!"], "reset": ["Vrátit na start", "Back to start"], "slow": ["Zpomalit 4×", "Slow down 4×"], "retry": ["Zkusit přesněji", "Try more precisely"], "next": ["Další úroveň →", "Next level →"], "canChange": ["Co můžeš změnit", "What you can change"], "fixedL": ["Co je dané", "What is fixed"], "epStart": ["Polohová energie na startu", "Potential energy at start"], "vNow": ["Rychlost teď", "Speed now"], "vMax": ["Nejvyšší rychlost", "Top speed"], "tries": ["Pokusy", "Attempts"], "barEp": ["Polohová", "Potential"], "barEk": ["Pohybová", "Kinetic"], "barHeat": ["Teplo a zeď", "Heat and wall"], "levelsH": ["Úrovně", "Levels"], "handT": ["Odevzdat výsledek", "Hand in your result"], "pnameL": ["Příjmení", "Surname"], "codeL": ["Tvůj kód", "Your code"], "teachT": ["Pro učitele: kontrola kódů", "For teachers: checking codes"], "tgo": ["Vyhodnotit", "Evaluate"], "footA": ["Pro učitele", "For teachers"], "sub": ["Doruč kuličku do cíle. V každé úrovni smíš měnit jen některé věci: start, hmotnost, planetu, tření nebo sílu zdi. Ostatní je dané a musíš to vymyslet.", "Deliver the ball to the target. In each level you may change only some things: the start, the mass, the planet, the friction or the wall strength. Everything else is fixed and you have to figure it out."], "handP": ["Napiš své příjmení bez diakritiky (háčky a čárky se odstraní samy). Kód pak opiš učiteli, nebo ho vlož do formuláře.", "Type your surname. Then copy the code for your teacher or paste it into the form."], "teachP": ["Vlož řádky ve tvaru <code>příjmení; kód</code> (oddělovač může být i tabulátor nebo čárka, třeba přímo zkopírované ze Sheets).", "Paste lines in the form <code>surname; code</code> (tab or comma also work, e.g. copied straight from Sheets)."], "thead": ["<tr><th>Příjmení</th><th>Kód</th><th>Splněno</th><th>Hvězdy</th><th>Chybí úrovně</th><th>Hvězdy po úrovních</th><th>Stav</th></tr>", "<tr><th>Surname</th><th>Code</th><th>Completed</th><th>Stars</th><th>Missing levels</th><th>Stars per level</th><th>Status</th></tr>"]};
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { const v = I18N[el.dataset.i18n]; if (v) el.innerHTML = v[lang === 'en' ? 1 : 0]; });
+  $('pname').placeholder = tx('napr. Novakova', 'e.g. Novak');
+  $('langBtn').textContent = tx('English', 'Česky');
+  cv.setAttribute('aria-label', tx('Herní plocha', 'Game area'));
+}
+$('langBtn').onclick = () => { lang = lang === 'en' ? 'cs' : 'en'; try { localStorage.setItem('kuryrLang', lang); } catch(e){} applyLang(); loadLevel(L); };
+applyLang();
 resize(); { let start = 0; while (start < LEVELS.length-1 && progress[start]) start++; loadLevel(start); }
 requestAnimationFrame(frame);
 })();
