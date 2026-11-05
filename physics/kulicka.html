@@ -167,6 +167,8 @@ code{font-family:var(--f-mono)}
       <div class="box">
         <dl class="fixed">
           <dt>Polohová energie na startu</dt><dd class="ep" id="rEp">–</dd>
+          <dt>Rychlost teď</dt><dd id="rV">0 km/h</dd>
+          <dt>Nejvyšší rychlost</dt><dd id="rVmax">–</dd>
           <dt>Pokusy</dt><dd id="rTries">0</dd>
         </dl>
         <div class="bars" aria-label="Energie právě teď">
@@ -193,9 +195,9 @@ code{font-family:var(--f-mono)}
   <section class="teacher" id="ucitel" hidden aria-labelledby="teachT">
     <h2 id="teachT">Pro učitele: kontrola kódů</h2>
     <p class="small">Vlož řádky ve tvaru <code>příjmení; kód</code> (oddělovač může být i tabulátor nebo čárka, třeba přímo zkopírované ze Sheets).</p>
-    <textarea id="tin" rows="6" placeholder="Nováková; 7K-4QX&#10;Svoboda; M2-9RD"></textarea>
+    <textarea id="tin" rows="6" placeholder="Novakova; 7KQ-4QX-2M9&#10;Svoboda; M2B-9RD-0TT"></textarea>
     <div class="row"><button type="button" class="go" id="tgo">Vyhodnotit</button></div>
-    <div class="tablebox"><table id="tout" hidden><thead><tr><th>Příjmení</th><th>Kód</th><th>Nejvyšší úroveň</th><th>Hvězdy</th><th>Stav</th></tr></thead><tbody></tbody></table></div>
+    <div class="tablebox"><table id="tout" hidden><thead><tr><th>Příjmení</th><th>Kód</th><th>Splněno</th><th>Hvězdy</th><th>Chybí úrovně</th><th>Hvězdy po úrovních</th><th>Stav</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <p class="small foot"><a href="#ucitel">Pro učitele</a></p>
@@ -272,11 +274,11 @@ const LEVELS = [
     task:'Máš jen 100 J polohové energie. Kopec má 4 m, za ním musí kulička zastavit v pásmu 4,5–5,1 m. Vyber hmotnost a start.',
     lesson:'Ep = m·g·h. Se stejnou energií se lehčí kulička dostane výš: 100 J stačí 2kg kuličce na 5,1 m, ale 4kg jen na 2,5 m.' },
 
-  { name:'Posuň košík', tags:'košík',
-    track:cosKeys([[0.6,7.6],[5.6,1.2],[6.2,1.2]]), x0:0.6, x1:6.2, start:{x:2.8}, m:2, g:9.81,
-    goal:{type:'jump', basket:{a:7.0, w:0.8, y:0.5, adj:[6.5,11,0.1]}},
-    task:'Kulička i skokánek jsou pevné. Posuň košík tak, aby do něj kulička spadla.',
-    lesson:'Ze známé výšky lze předpovědět rychlost na hraně: v = √(2·g·Δh). Z rychlosti pak plyne, kam kulička doletí.' },
+  { name:'Radar', tags:'start + hmotnost',
+    track:cosKeys([[0.6,7.4],[3.2,0.6],[11.8,0.6]]), x0:0.6, x1:11.8, start:{x:2.6, range:[0.9,3.0]}, m:{value:1, options:[1,2,5]}, g:9.81,
+    goal:{type:'radar', x:6.0, zone:[24,30]},
+    task:'Na rovince stojí radar. Kulička musí projet rychlostí 24–30 km/h, ideálně přesně 27 km/h. Nastav start, a jestli chceš, i hmotnost.',
+    lesson:'Rychlost dole závisí jen na výšce startu, ne na hmotnosti: těžší kulička má víc energie, ale stejně víc jí potřebuje na rozjetí. A dvakrát vyšší start neznamená dvakrát vyšší rychlost.' },
 
   { name:'Planety', tags:'planeta',
     track:cosKeys([[0.6,5.2],[3.2,0.6],[11.8,0.6]]), x0:0.6, x1:11.8, start:{x:0.9}, m:2, g:{value:24.8, options:['Měsíc','Mars','Země','Jupiter']},
@@ -321,16 +323,16 @@ const LEVELS = [
 ];
 
 let L = 0, lv, track, m, g, slow = false, state = 'place', tries = 0, runT = 0;
-let wallJ = 0, dropH = 0, sd = 0, phase = '', frics = [], basketA = 0, wallBroken = false, shards = [], demo = false, answered = false, apexH = null;
+let radarV = null, vmax = 0, vmaxX = 0, vmaxY = 0, wallJ = 0, dropH = 0, sd = 0, phase = '', frics = [], basketA = 0, wallBroken = false, shards = [], demo = false, answered = false, apexH = null;
 const ball = { s:0, dir:1, Em:0, E0:0, startS:0, startH:0, angle:0, traveled:0, fx:0, fy:0, vx:0, vy:0, maxX:0, loss:0 };
 let progress = {};
 try { progress = JSON.parse(localStorage.getItem('kuryr3') || '{}'); } catch(e){ progress = {}; }
 const save = () => { try { localStorage.setItem('kuryr3', JSON.stringify(progress)); } catch(e){} };
 
 /* ---------- kód výsledku ----------
-   payload p = nejvyšší splněná úroveň (0–15) · 46 + hvězdy (0–45)  → 10 bitů
-   kód = (p XOR maska z příjmení) · 32768 + kontrolní součet(příjmení, p)  → 25 bitů = 5 znaků base32
-   Pro dané jméno je převod prostý a vratný; cizí jméno nebo překlep kontrolou neprojde. */
+   payload P = hvězdy každé úrovně, 2 bity na úroveň (0 = nesplněno) → 15 úrovní = 30 bitů
+   kód = (P XOR maska z příjmení) · 32768 + kontrolní součet(příjmení, P) → 45 bitů = 9 znaků base32
+   Pro dané příjmení je převod prostý a vratný: z kódu se přečte přesně, kolik hvězd má žák v každé úrovni. */
 const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const normName = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 function cyrb53(str, seed = 0){
@@ -340,35 +342,36 @@ function cyrb53(str, seed = 0){
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
-const mask = n => cyrb53(n + '|kuryr-maska', 7) % 1024;
-const check = (n, p) => cyrb53(n + '|' + p + '|kuryr-kontrola', 11) % 32768;
-function encode(name, highest, stars){
-  const n = normName(name), p = highest*46 + stars;
-  let v = (p ^ mask(n)) * 32768 + check(n, p), s = '';
-  for (let i = 0; i < 5; i++){ s = B32[v % 32] + s; v = Math.floor(v / 32); }
-  return s.slice(0,2) + '-' + s.slice(2);
+const NL = 15, PMAX = 2 ** (2*NL);
+const mask = n => cyrb53(n + '|kuryr-maska', 7) % PMAX;
+const check = (n, P) => cyrb53(n + '|' + P + '|kuryr-kontrola', 11) % 32768;
+function packStars(arr){ let P = 0; for (let i = NL-1; i >= 0; i--) P = P*4 + (arr[i] || 0); return P; }
+function unpackStars(P){ const a = []; for (let i = 0; i < NL; i++){ a.push(P % 4); P = Math.floor(P / 4); } return a; }
+function encode(name, arr){
+  const n = normName(name), P = packStars(arr);
+  let v = ((P ^ mask(n)) >>> 0) * 32768 + check(n, P), s = '';
+  for (let i = 0; i < 9; i++){ s = B32[v % 32] + s; v = Math.floor(v / 32); }
+  return s.slice(0,3) + '-' + s.slice(3,6) + '-' + s.slice(6);
 }
 function decode(name, code){
   const n = normName(name);
   const c = code.toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/O/g,'0').replace(/[IL]/g,'1');
-  if (!n || c.length !== 5) return null;
+  if (!n || c.length !== 9) return null;
   let v = 0; for (const ch of c){ const d = B32.indexOf(ch); if (d < 0) return null; v = v*32 + d; }
-  const p = Math.floor(v / 32768) ^ mask(n);
-  if (p >= 736 || v % 32768 !== check(n, p)) return null;
-  const highest = Math.floor(p / 46), stars = p % 46;
-  if (stars > highest*3) return null;
-  return { highest, stars };
+  const masked = Math.floor(v / 32768);
+  if (masked >= PMAX) return null;
+  const P = (masked ^ mask(n)) >>> 0;
+  if (v % 32768 !== check(n, P)) return null;
+  const per = unpackStars(P);
+  return { per, done: per.filter(x => x > 0).length, stars: per.reduce((a, b) => a + b, 0), missing: per.map((x, i) => x ? null : i+1).filter(Boolean) };
 }
-function summary(){
-  let highest = 0, stars = 0;
-  for (const k in progress){ highest = Math.max(highest, +k + 1); stars += progress[k]; }
-  return { highest, stars, done: Object.keys(progress).length };
-}
+function myStars(){ const a = []; for (let i = 0; i < NL; i++) a.push(progress[i] || 0); return a; }
 function updateCode(){
-  const name = $('pname').value, sm = summary();
+  const name = $('pname').value, arr = myStars(), done = arr.filter(x => x).length, st = arr.reduce((a, b) => a + b, 0);
+  const miss = arr.map((x, i) => x ? null : i+1).filter(Boolean);
   if (!normName(name)){ $('pcode').textContent = '—'; $('pinfo').textContent = 'Nejdřív napiš příjmení.'; return; }
-  $('pcode').textContent = encode(name, sm.highest, sm.stars);
-  $('pinfo').textContent = `Nejvyšší splněná úroveň: ${sm.highest} z ${LEVELS.length} · hvězdy: ${sm.stars}`;
+  $('pcode').textContent = encode(name, arr);
+  $('pinfo').textContent = `Splněno ${done} z ${LEVELS.length} úrovní · hvězdy: ${st}` + (miss.length && miss.length < LEVELS.length ? ` · chybí: ${miss.join(', ')}` : '');
 }
 
 /* ---------- dráha ---------- */
@@ -402,7 +405,7 @@ function loadLevel(i){
   const isQ = lv.goal.type === 'answer', best = progress[i] || 0;
   $('starInfo').innerHTML = (isQ ? (lv.goal.kind === 'height' ? 'Hvězdy podle přesnosti odpovědi: ★★★ do 0,1 m · ★★ do 0,2 m · ★ do 0,3 m.' : 'Správná odpověď = ★★★.')
     : 'Hvězdy podle přesnosti: ★★★ nejužší tmavý pruh · ★★ prostřední · ★ celý cíl.')
-    + ` Pokusů máš neomezeně. Další úroveň se odemkne s aspoň jednou hvězdou. Nejlepší výsledek: ${starStr(best)}`;
+    + ` Pokusů máš neomezeně. Úroveň můžeš přeskočit, ale bez hvězdy se nepočítá jako splněná. Nejlepší výsledek: ${starStr(best)}`;
   buildAnswer();
   buildControls();
   place(sOfX(lv.start.x));
@@ -486,7 +489,7 @@ function place(s){
   if (lv.drop){
     const D = lv.drop; dropH = Math.max(D.range[0], Math.min(D.range[1], dropH));
     ball.startH = ball.dy = dropH; ball.vy = 0; sd = 0; phase = ''; ball.fx = 0; ball.angle = 0;
-    ball.E0 = ball.Em = m*g*dropH;
+    ball.E0 = ball.Em = m*g*dropH; resetSpeed();
     state = 'place'; apexH = null;
     $('result').hidden = true; $('next').hidden = true; $('retry').hidden = true; $('go').disabled = false;
     $('hint').textContent = 'Táhni závaží nahoru nebo dolů a stiskni Pustit';
@@ -496,7 +499,7 @@ function place(s){
   if (lv.budget){ let k = 0; while (hAt(s) > hCap() && k++ < 400) s += DS*(slopeAt(s) < 0 ? 1 : -1); }
   ball.s = s; ball.startS = s; ball.startH = hAt(s); ball.fx = 0; ball.angle = 0;
   ball.E0 = ball.Em = m*g*ball.startH; ball.traveled = 0; ball.maxX = xAt(s); ball.loss = 0;
-  wallBroken = false; shards = [];
+  wallBroken = false; shards = []; radarV = null; resetSpeed();
   state = 'place';
   apexH = null;
   if (!(isAnswer() && answered)){ $('result').hidden = true; $('next').hidden = true; $('retry').hidden = true; }
@@ -504,6 +507,7 @@ function place(s){
   $('hint').textContent = isAnswer() ? (answered ? 'Stiskni Pustit a ověř si odpověď' : 'Nejdřív odpověz na otázku') : lv.start.range ? 'Posuň kuličku po modré části a stiskni Pustit' : 'Kulička je pevně na místě. Změň něco jiného.';
   updateReadouts();
 }
+function resetSpeed(){ vmax = 0; if ($('rVmax')) $('rVmax').textContent = '–'; }
 function updateReadouts(){
   const f = $('fixed'); const rows = [];
   rows.push([lv.drop ? 'Výška pádu (spodek závaží)' : 'Výška startu', fmt(ball.startH) + ' m' + (lv.start.range || lv.drop ? '' : ' (pevná)')]);
@@ -637,6 +641,13 @@ function step(dt){
     ball.angle += (ns - ball.s)/R; ball.traveled += d; ball.s = ns;
     const x = xAt(ns); ball.maxX = Math.max(ball.maxX, x);
     if (lv.goal.type === 'pass' && x > lv.goal.x) finish(true);
+    if (lv.goal.type === 'radar' && ball.dir > 0 && x >= lv.goal.x){
+      const kmh = Math.sqrt(Math.max(0, 2*(ball.Em/m - g*hAt(ns))))*3.6, [za, zb] = lv.goal.zone, c0 = (za+zb)/2;
+      radarV = kmh; const st = grade(kmh, c0, (zb-za)/2);
+      if (st) finish(true, '', st, `Radar naměřil ${fmt(kmh)} km/h, cíl je ${fmt(c0,0)} km/h.`);
+      else finish(false, `Radar naměřil ${fmt(kmh)} km/h, povoleno je ${za}–${zb} km/h. Kulička jela moc ${kmh < za ? 'pomalu' : 'rychle'}.`);
+      return;
+    }
     if (lv.goal.type === 'stop' && x > lv.goal.zone[1] + 0.3) { finish(false, 'Kulička projela garáží. Brzdila málo, nebo měla energie moc.'); return; }
   }
 }
@@ -703,6 +714,20 @@ function draw(){
     ctx.strokeStyle = c.goal; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(fx), Y(fy)); ctx.lineTo(X(fx), Y(fy+1)); ctx.stroke();
     ctx.fillStyle = c.goal; ctx.beginPath(); ctx.moveTo(X(fx), Y(fy+1)); ctx.lineTo(X(fx+0.6), Y(fy+0.8)); ctx.lineTo(X(fx), Y(fy+0.6)); ctx.fill();
   }
+  if (G.type === 'radar'){
+    const rx = G.x, gy = 0.6, [za, zb] = G.zone, c0 = (za+zb)/2, hf = (zb-za)/2;
+    ctx.strokeStyle = c.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(rx), Y(gy)); ctx.lineTo(X(rx), Y(gy + 1.6)); ctx.stroke();
+    ctx.fillStyle = c.ink; ctx.fillRect(X(rx - 0.35), Y(gy + 1.9), 0.7*k, 0.3*k);
+    ctx.fillStyle = c.ek; ctx.beginPath(); ctx.arc(X(rx - 0.35), Y(gy + 1.75), 0.08*k, 0, Math.PI*2); ctx.fill();
+    // stupnice 0–50 km/h
+    const sx0 = 6.6, sx1 = 11.4, sy = 4.2, sc = v => sx0 + (sx1 - sx0)*Math.min(1, v/50);
+    ctx.fillStyle = c.muted; ctx.font = font(600,.22); ctx.fillText('RADAR (km/h)', X(sx0), Y(sy + 0.75));
+    ctx.fillStyle = c.grid; ctx.fillRect(X(sx0), Y(sy + 0.4), X(sx1) - X(sx0), 0.4*k);
+    BANDS.forEach(f => { ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(sc(c0 - hf*f)), Y(sy + 0.4), X(sc(c0 + hf*f)) - X(sc(c0 - hf*f)), 0.4*k); });
+    ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.2)}px "IBM Plex Mono", monospace`;
+    for (let v = 0; v <= 50; v += 10) ctx.fillText(String(v), X(sc(v)) - 6, Y(sy - 0.25));
+    if (radarV != null){ ctx.fillStyle = c.ek; ctx.fillRect(X(sc(radarV)) - 2, Y(sy + 0.6), 4, 0.8*k); ctx.font = font(700,.26); ctx.fillText(fmt(radarV) + ' km/h', X(sc(radarV)) - 30, Y(sy + 0.8)); }
+  }
   if (G.type === 'pass'){ ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(G.x), 0, cw - X(G.x), ch); ctx.fillStyle = c.goal; ctx.font = font(700,.28); ctx.fillText('CÍL', X(G.x) + 8, 22); }
   if (G.type === 'stop'){
     const [a,b] = G.zone, c0 = (a+b)/2, hf = (b-a)/2;
@@ -761,6 +786,7 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(X(bx), Y(by)); ctx.lineTo(X(bx) + Math.cos(ball.angle)*r*.8, Y(by) + Math.sin(ball.angle)*r*.8); ctx.stroke();
   ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(X(bx)-r*.3, Y(by)-r*.3, r*.28, 0, Math.PI*2); ctx.fillStyle = c['ball-hi']; ctx.fill(); ctx.globalAlpha = 1;
   if (mOpts()){ ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.2)}px "IBM Plex Mono", monospace`; ctx.fillText(m + ' kg', X(bx) + r + 4, Y(by) - r); }
+  drawSpeedPhoto(c);
 }
 
 function drawBall(c, bx, by){
@@ -797,8 +823,32 @@ function drawDrop(c, cw, ch){
   if (state === 'place' || phase === ''){ ctx.strokeStyle = c.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(x), Y(armY)); ctx.lineTo(X(x), Y(by)); ctx.stroke(); }
   drawBall(c, x, by);
   shards.forEach(p => { ctx.fillStyle = c.muted; ctx.fillRect(X(p.x), Y(p.y), 0.08*k, 0.08*k); });
+  drawSpeedPhoto(c);
+}
+function speedNow(){
+  if (lv.drop) return { v: Math.abs(ball.vy), x: lv.drop.x, y: ball.dy + R*Math.min(1.6, 0.8 + m*0.08) };
+  if (state === 'fly' || ball.fx) return { v: Math.hypot(ball.vx, ball.vy), x: ball.fx, y: ball.fy };
+  const ep = m*g*hAt(ball.s); return { v: Math.sqrt(Math.max(0, 2*(ball.Em - ep)/m)), x: xAt(ball.s), y: hAt(ball.s) + LIFT };
+}
+function trackSpeed(){
+  const sp = speedNow(), moving = state === 'run' || state === 'fly';
+  const shown = moving ? sp.v : 0;
+  $('rV').textContent = Math.round(shown*3.6) + ' km/h';
+  if (moving && sp.v > vmax){ vmax = sp.v; vmaxX = sp.x; vmaxY = sp.y; $('rVmax').textContent = Math.round(vmax*3.6) + ' km/h'; }
+}
+function drawSpeedPhoto(c){
+  if (vmax < 0.5 || state === 'place') return;
+  const x = X(vmaxX), y = Y(vmaxY), r = Math.max(10, k*0.32);
+  ctx.strokeStyle = c.ek; ctx.lineWidth = 2; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  for (let i = 0; i < 8; i++){ const a = i*Math.PI/4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a)*r*1.15, y + Math.sin(a)*r*1.15); ctx.lineTo(x + Math.cos(a)*r*1.45, y + Math.sin(a)*r*1.45); ctx.stroke(); }
+  const label = 'max ' + Math.round(vmax*3.6) + ' km/h';
+  ctx.font = font(700,.24); const w = ctx.measureText(label).width + 10, ly = y - r*1.6 - 18, lx = Math.min(W*k - w - 4, Math.max(4, x - w/2));
+  ctx.fillStyle = c.paper; ctx.fillRect(lx, ly, w, 22); ctx.strokeStyle = c.ek; ctx.lineWidth = 1.5; ctx.strokeRect(lx, ly, w, 22);
+  ctx.fillStyle = c.ek; ctx.fillText(label, lx + 5, ly + 16);
 }
 function meters(){
+  trackSpeed();
   if (lv.drop){
     const ep = m*g*ball.dy, ek = 0.5*m*ball.vy*ball.vy, tot = Math.max(1, ball.E0), lost = Math.max(0, tot - ep - ek);
     $('fEp').style.width = Math.min(100, ep/tot*100) + '%'; $('fEk').style.width = Math.min(100, ek/tot*100) + '%'; $('fHeat').style.width = Math.min(100, lost/tot*100) + '%';
@@ -819,8 +869,6 @@ function renderLevels(){
     const b = document.createElement('button'); b.type = 'button'; b.className = 'lv'; b.setAttribute('aria-pressed', i === L);
     const st = progress[i] || 0;
     b.innerHTML = `<span>${i+1}. ${l.name}</span><span class="tags">mění se: ${l.tags}</span><small class="stars">${st ? '★'.repeat(st) + '☆'.repeat(3-st) : '☆☆☆'}</small>`;
-    const locked = i > 0 && !progress[i-1];
-    if (locked){ b.disabled = true; b.title = 'Nejdřív získej hvězdu v předchozí úrovni'; b.querySelector('.tags').textContent = 'zamčeno'; }
     b.onclick = () => loadLevel(i); nav.appendChild(b);
   });
   updateCode();
@@ -839,7 +887,7 @@ $('tgo').onclick = () => {
     const name = m ? m[1].trim() : line, code = m ? m[2] : '';
     const r = m ? decode(name, code) : null;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${esc(plain(name))}</td><td><code>${esc(code)}</code></td><td>${r ? r.highest + ' / ' + LEVELS.length : '–'}</td><td>${r ? r.stars : '–'}</td><td class="${r ? 'ok' : 'bad'}">${r ? 'platný' : 'neplatný'}</td>`;
+    tr.innerHTML = `<td>${esc(plain(name))}</td><td><code>${esc(code)}</code></td><td>${r ? r.done + ' / ' + LEVELS.length : '–'}</td><td>${r ? r.stars + ' / ' + 3*LEVELS.length : '–'}</td><td>${r ? (r.missing.length ? r.missing.join(', ') : 'nic, vše splněno') : '–'}</td><td><code>${r ? r.per.map(x => x || '·').join(' ') : '–'}</code></td><td class="${r ? 'ok' : 'bad'}">${r ? 'platný' : 'neplatný'}</td>`;
     tb.appendChild(tr);
   });
   $('tout').hidden = !rows.length;
