@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Kuličkový kurýr – hra o polohové a pohybové energii pro 8. ročník.">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px;font-family:system-ui,sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Kuličkový kurýr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: milimetrový papír s úrovní vlevo, panel úkolu a ovladačů vpravo; pod tím mapa úrovní */
+:root{
+  --bg:#e9eee8; --paper:#f8faf5; --grid:#dbe3d8; --grid-strong:#bccab8;
+  --ink:#1c2a30; --muted:#56655f; --line:#c9d3c6;
+  --ep:#2f56c9; --ek:#d9571a; --heat:#9e3a2f; --goal:#1e8a4c; --bad:#b4342a; --star:#d99a12; --brick:#a4553a;
+  --track-fill:rgba(28,42,48,.07); --goal-fill:rgba(30,138,76,.16); --heat-fill:rgba(158,58,47,.35); --ball:#33444c; --ball-hi:#ffffff;
+  --btn:#ffffff; --btn-on:#1c2a30; --btn-on-fg:#f8faf5;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121a1c; --paper:#182226; --grid:#223036; --grid-strong:#304249;
+  --ink:#e4ece8; --muted:#97a8a2; --line:#2c3b41;
+  --ep:#7f9cff; --ek:#ff9459; --heat:#e27a6f; --goal:#4fcf86; --bad:#ff7b70; --star:#f2bd43; --brick:#d07a5c;
+  --track-fill:rgba(228,236,232,.06); --goal-fill:rgba(79,207,134,.16); --heat-fill:rgba(226,122,111,.4); --ball:#c7d3d7; --ball-hi:#ffffff;
+  --btn:#1f2b30; --btn-on:#e4ece8; --btn-on-fg:#121a1c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a1c; --paper:#182226; --grid:#223036; --grid-strong:#304249;
+  --ink:#e4ece8; --muted:#97a8a2; --line:#2c3b41;
+  --ep:#7f9cff; --ek:#ff9459; --heat:#e27a6f; --goal:#4fcf86; --bad:#ff7b70; --star:#f2bd43; --brick:#d07a5c;
+  --track-fill:rgba(228,236,232,.06); --goal-fill:rgba(79,207,134,.16); --heat-fill:rgba(226,122,111,.4); --ball:#c7d3d7; --ball-hi:#ffffff;
+  --btn:#1f2b30; --btn-on:#e4ece8; --btn-on-fg:#121a1c; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1200px;margin:0 auto;padding-block:16px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,5vw,40px);line-height:1;margin:0;letter-spacing:-.01em}
+.sub{margin:6px 0 0;color:var(--muted);max-width:70ch}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto 1fr;grid-template-areas:"stage brief" "stage side";gap:12px 16px;align-items:start}
+.brief{grid-area:brief} .stage{grid-area:stage} .side{grid-area:side}
+.side .row:empty,.side .row:has(> button[hidden] + button[hidden]){display:none}
+@media (max-width:880px){
+  .lab{grid-template-columns:minmax(0,1fr);grid-template-areas:"brief" "stage" "side";gap:10px}
+  .wrap{padding-block:10px 32px;gap:10px}
+  .sub{display:none}
+  h1{font-size:24px}
+  .brief{padding:12px;gap:8px}
+  .lvname{font-size:20px}
+  .go{flex:1 1 auto}
+}
+.stage{min-width:0;display:flex;flex-direction:column;gap:10px}
+.canvas-box{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--paper)}
+canvas{display:block;width:100%;aspect-ratio:3/2;max-width:100%;touch-action:none}
+.hint{position:absolute;left:10px;top:8px;font-size:13px;color:var(--muted);background:var(--paper);padding:2px 6px;border-radius:4px;pointer-events:none}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--btn);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ep);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--btn-on);color:var(--btn-on-fg);border-color:var(--btn-on)}
+.go{background:var(--ek);border-color:var(--ek);color:#fff;font-weight:600;font-size:16px;padding:9px 22px}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+.panel{border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.lvname{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;margin:2px 0 0}
+.task{margin:0}
+.box{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:10px}
+.ctl{display:flex;flex-direction:column;gap:5px}
+.ctl .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl output,.fixed dd{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ctl button{padding:5px 10px}
+input[type=range]{width:100%;accent-color:var(--ek)}
+.fixed{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}
+.fixed dt{color:var(--muted)} .fixed dd{margin:0;text-align:right}
+.ep{color:var(--ep);font-weight:600}
+.bars{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bar{display:flex;flex-direction:column;gap:3px}
+.tube{height:10px;border-radius:5px;background:var(--grid);overflow:hidden}
+.fill{height:100%;width:0;border-radius:5px}
+.b-ep .fill{background:var(--ep)} .b-ek .fill{background:var(--ek)} .b-heat .fill{background:var(--heat)}
+.bar span{font-size:12px;font-weight:600}
+.b-ep span{color:var(--ep)} .b-ek span{color:var(--ek)} .b-heat span{color:var(--heat)}
+.result{border-radius:6px;padding:10px 12px;border:1px solid var(--line)}
+.result.win{border-color:var(--goal);background:var(--goal-fill)}
+.result.lose{border-color:var(--bad)}
+.result b{display:block;font-family:var(--f-display);font-size:18px}
+.result.win b{color:var(--goal)} .result.lose b{color:var(--bad)}
+.result p{margin:4px 0 0}
+.ans{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ans input{width:110px!important}
+.choices{display:flex;flex-direction:column;gap:6px}
+.choices button{border-radius:6px;text-align:left}
+.stars{color:var(--star);letter-spacing:2px}
+
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.lv{border-radius:6px;text-align:left;display:flex;flex-direction:column;gap:2px;padding:8px 12px}
+.lv small{font-family:var(--f-mono)}
+.lv .tags{font-size:12px;color:var(--muted)}
+.lv[aria-pressed="true"] .tags{color:inherit;opacity:.75}
+h2{font-family:var(--f-display);font-weight:800;font-size:20px;margin:6px 0 0}
+.small{font-size:13px;color:var(--muted);margin:0}
+.hand,.teacher{border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:14px;display:flex;flex-direction:column;gap:10px}
+.hand h2,.teacher h2{margin:0}
+.handrow{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.handrow .ctl{flex:1 1 240px;min-width:0}
+input[type=text],textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%;box-sizing:border-box}
+textarea{font-family:var(--f-mono);font-size:14px}
+.codebox{display:flex;flex-direction:column;gap:2px}
+#pcode{font-family:var(--f-mono);font-size:32px;letter-spacing:.12em;line-height:1.1}
+.tablebox{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.ok{color:var(--goal);font-weight:600} td.bad{color:var(--bad);font-weight:600}
+code{font-family:var(--f-mono)}
+.foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Kuličkový kurýr</h1>
+    <p class="sub">Doruč kuličku do cíle. V každé úrovni smíš měnit jen některé věci: start, hmotnost, planetu, tření nebo polohu košíku. Ostatní je dané a musíš to vymyslet.</p>
+  </header>
+
+  <section class="lab">
+    <div class="panel brief">
+      <div>
+        <span class="label" id="lvnum"></span>
+        <p class="lvname" id="lvname"></p>
+      </div>
+      <p class="task" id="lvtask"></p>
+      <p class="small" id="starInfo"></p>
+      <div class="box" id="answerBox" hidden></div>
+    </div>
+    <div class="stage">
+      <div class="canvas-box">
+        <canvas id="cv" aria-label="Herní plocha"></canvas>
+        <span class="hint" id="hint"></span>
+      </div>
+      <div class="row">
+        <button type="button" class="go" id="go">Pustit!</button>
+        <button type="button" id="reset">Vrátit na start</button>
+        <button type="button" id="slow" aria-pressed="false">Zpomalit 4×</button>
+      </div>
+    </div>
+
+    <aside class="panel side">
+      <div id="result" hidden></div>
+      <div class="row"><button type="button" id="retry" hidden>Zkusit přesněji</button><button type="button" id="next" hidden>Další úroveň →</button></div>
+      <div class="box">
+        <span class="label">Co můžeš změnit</span>
+        <div id="controls"></div>
+      </div>
+      <div class="box">
+        <span class="label">Co je dané</span>
+        <dl class="fixed" id="fixed"></dl>
+      </div>
+      <div class="box">
+        <dl class="fixed">
+          <dt>Polohová energie na startu</dt><dd class="ep" id="rEp">–</dd>
+          <dt>Pokusy</dt><dd id="rTries">0</dd>
+        </dl>
+        <div class="bars" aria-label="Energie právě teď">
+          <div class="bar b-ep"><span>Polohová</span><div class="tube"><div class="fill" id="fEp"></div></div></div>
+          <div class="bar b-ek"><span>Pohybová</span><div class="tube"><div class="fill" id="fEk"></div></div></div>
+          <div class="bar b-heat"><span>Teplo a zeď</span><div class="tube"><div class="fill" id="fHeat"></div></div></div>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <h2>Úrovně</h2>
+  <nav class="levels" id="levels" aria-label="Výběr úrovně"></nav>
+
+  <section class="hand" aria-labelledby="handT">
+    <h2 id="handT">Odevzdat výsledek</h2>
+    <p class="small">Napiš své příjmení bez diakritiky (háčky a čárky se odstraní samy). Kód pak opiš učiteli, nebo ho vlož do formuláře.</p>
+    <div class="handrow">
+      <div class="ctl"><label class="label" for="pname">Příjmení</label><input type="text" id="pname" autocomplete="family-name" placeholder="napr. Novakova"></div>
+      <div class="codebox"><span class="label">Tvůj kód</span><output id="pcode">—</output><span class="small" id="pinfo"></span></div>
+    </div>
+  </section>
+
+  <section class="teacher" id="ucitel" hidden aria-labelledby="teachT">
+    <h2 id="teachT">Pro učitele: kontrola kódů</h2>
+    <p class="small">Vlož řádky ve tvaru <code>příjmení; kód</code> (oddělovač může být i tabulátor nebo čárka, třeba přímo zkopírované ze Sheets).</p>
+    <textarea id="tin" rows="6" placeholder="Nováková; 7K-4QX&#10;Svoboda; M2-9RD"></textarea>
+    <div class="row"><button type="button" class="go" id="tgo">Vyhodnotit</button></div>
+    <div class="tablebox"><table id="tout" hidden><thead><tr><th>Příjmení</th><th>Kód</th><th>Nejvyšší úroveň</th><th>Hvězdy</th><th>Stav</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <p class="small foot"><a href="#ucitel">Pro učitele</a></p>
+</div>
+
+<script>
+(() => {
+const W = 12, H = 8, DS = 0.04, R = 0.28, LIFT = R + 0.045;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+const fmt = (x, d=1) => x.toFixed(d).replace('.', ',');
+const PLANETS = { 'Měsíc':1.62, 'Mars':3.71, 'Země':9.81, 'Jupiter':24.8 };
+const planetOf = g => Object.keys(PLANETS).find(k => PLANETS[k] === g) || '';
+
+const cosKeys = keys => x => {
+  for (let i = 0; i < keys.length-1; i++){
+    const [x0,y0] = keys[i], [x1,y1] = keys[i+1];
+    if (x <= x1 || i === keys.length-2){ const t = Math.max(0, Math.min(1, (x-x0)/(x1-x0))); return y0 + (y1-y0)*(1-Math.cos(Math.PI*t))/2; }
+  }
+};
+const U = x => 0.6 + 6.2*Math.pow((x-6)/5.2, 2);
+const uX = h => 6 + 5.2*Math.sqrt((h-0.6)/6.2);
+
+/* Každá úroveň: co je pohyblivé (start / m / g / tření / košík) a jaký je cíl. */
+const LEVELS = [
+  { name:'Na druhou stranu', tags:'start',
+    track:U, x0:0.6, x1:11.4, start:{x:3.6, range:[0.8,5.0]}, m:2, g:9.81,
+    goal:{type:'apex', zone:[4.0,4.6], sideX:6},
+    task:'Posuň kuličku po modré části rampy tak, aby se na druhé straně zastavila v zeleném pásmu (4,0–4,6 m).',
+    lesson:'Bez tření vyjede kulička přesně do výšky, ze které vyjela. Polohová energie se mění na pohybovou a zpátky.' },
+
+  { name:'Brzdná dráha', tags:'tření',
+    track:cosKeys([[0.6,2.6],[3.6,0.6],[11.4,0.6]]), x0:0.6, x1:11.4, start:{x:0.9}, m:2, g:9.81,
+    friction:[{a:3.6, b:11.4, mu:0.15, adj:[0.05,0.6,0.01]}],
+    goal:{type:'stop', zone:[9.0,10.4], label:'GARÁŽ'},
+    task:'Kulička stojí pevně na startu. Nastav tření brzdného pásu (červený) tak, aby zastavila v garáži.',
+    lesson:'Tření mění pohybovou energii na teplo. Čím větší tření, tím rychleji energie zmizí a tím kratší je brzdná dráha.' },
+
+  { name:'Přes kopec', tags:'start',
+    track:cosKeys([[0.6,7],[3,0.6],[6.5,5],[9.3,0.6],[11.8,7.2]]), x0:0.6, x1:11.8, start:{x:2.1, range:[0.9,2.6]}, m:2, g:9.81,
+    goal:{type:'apex', zone:[5.6,6.4], sideX:9.3},
+    task:'Dostaň kuličku přes kopec vysoký 5 m a zastav ji na pravé rampě v zeleném pásmu (5,6–6,4 m).',
+    lesson:'Na vrcholu potřebuje kulička polohovou energii m·g·5 m, takže musí začít výš než 5 m.' },
+
+  { name:'Jak vysoko vyjede?', tags:'otázka',
+    track:cosKeys([[0.6,6.6],[3.2,0.6],[5.6,0.6],[11.8,7.2]]), x0:0.6, x1:11.8, start:{x:1.13}, m:2, g:9.81,
+    wall:{x:4.4, J:40}, goal:{type:'answer', kind:'height', sideX:5.6, tol:0.3},
+    task:'Kulička (2 kg) vyjede z výšky na startu, prorazí zeď a vyjede na pravou rampu. Do jaké výšky vyjede? Spočítej a napiš odpověď v metrech.',
+    hint:'Zeď si vezme 40 J. Spočítej, kolik metrů výšky to je pro 2kg kuličku: h = E / (m · g).',
+    lesson:'Zeď si vzala 40 J, to je pro 2kg kuličku 40 / (2 · 9,81) ≈ 2,0 m výšky. Kulička proto vyjede asi o 2 m níž, než odkud vyjela.' },
+
+  { name:'Rozbij zeď', tags:'hmotnost',
+    track:cosKeys([[0.6,5.2],[3.2,0.6],[11.8,0.6]]), x0:0.6, x1:11.8, start:{x:0.9}, m:{value:1, options:[1,2,3,4,5,6]}, g:9.81,
+    wall:{x:5.5, J:150}, friction:[{a:6.0, b:11.8, mu:0.3}],
+    goal:{type:'stop', zone:[10.28,11.28], label:'GARÁŽ'},
+    task:'Výška startu je daná. Zeď vydrží 150 J, za ní je brzdný pás a garáž. Vyber hmotnost tak, aby kulička zeď prorazila a zároveň zastavila v garáži.',
+    lesson:'Těžší kulička má víc energie. Zeď si vezme 150 J, zbytek se na brzdném pásu změní v teplo. Lehká kulička zeď neprorazí, příliš těžké zbude tolik energie, že projede garáží.' },
+
+  { name:'Zeď a kopec', tags:'start',
+    track:cosKeys([[0.6,7.4],[3.2,0.6],[5.6,0.6],[7.6,3],[9.2,0.6],[11.8,5.2]]), x0:0.6, x1:11.8, start:{x:2.0, range:[0.9,2.6]}, m:2, g:9.81,
+    wall:{x:4.4, J:60}, goal:{type:'apex', zone:[3.4,3.9], sideX:9.2},
+    task:'Kulička musí prorazit zeď (60 J), přejet kopec (3 m) a zastavit v zeleném pásmu 3,4–3,9 m na pravé rampě. Odkud ji pustíš?',
+    lesson:'Zeď si vzala 60 J. Pro 2kg kuličku je to stejně jako 60 / (2 · 9,81) ≈ 3,1 m výšky. Musí proto začít asi o 3,1 m výš, než kam má vyjet.' },
+
+  { name:'Energetický rozpočet', tags:'start + hmotnost',
+    track:cosKeys([[0.6,7.4],[3.2,0.6],[6.5,4],[9.3,0.6],[11.8,6.4]]), x0:0.6, x1:11.8, start:{x:2.4, range:[0.9,2.9]}, m:{value:4, options:[1,2,3,4,5]}, g:9.81,
+    budget:100, goal:{type:'apex', zone:[4.5,5.1], sideX:9.3},
+    task:'Máš jen 100 J polohové energie. Kopec má 4 m, za ním musí kulička zastavit v pásmu 4,5–5,1 m. Vyber hmotnost a start.',
+    lesson:'Ep = m·g·h. Se stejnou energií se lehčí kulička dostane výš: 100 J stačí 2kg kuličce na 5,1 m, ale 4kg jen na 2,5 m.' },
+
+  { name:'Posuň košík', tags:'košík',
+    track:cosKeys([[0.6,7.6],[5.6,1.2],[6.2,1.2]]), x0:0.6, x1:6.2, start:{x:2.8}, m:2, g:9.81,
+    goal:{type:'jump', basket:{a:7.0, w:0.8, y:0.5, adj:[6.5,11,0.1]}},
+    task:'Kulička i skokánek jsou pevné. Posuň košík tak, aby do něj kulička spadla.',
+    lesson:'Ze známé výšky lze předpovědět rychlost na hraně: v = √(2·g·Δh). Z rychlosti pak plyne, kam kulička doletí.' },
+
+  { name:'Planety', tags:'planeta',
+    track:cosKeys([[0.6,5.2],[3.2,0.6],[11.8,0.6]]), x0:0.6, x1:11.8, start:{x:0.9}, m:2, g:{value:24.8, options:['Měsíc','Mars','Země','Jupiter']},
+    wall:{x:5.5, J:60}, friction:[{a:6.0, b:11.8, mu:0.3}],
+    goal:{type:'stop', zone:[10.28,11.28], label:'GARÁŽ'},
+    task:'Výška i hmotnost jsou dané. Zeď vydrží 60 J, za ní je brzdný pás a garáž. Na které planetě kulička zeď prorazí a zastaví v garáži?',
+    lesson:'Ep = m·g·h závisí i na gravitaci. Na Měsíci a Marsu nemá kulička dost energie na zeď, na Jupiteru jí zbude tolik, že projede garáží.' },
+
+  { name:'Planetární rozpočet', tags:'planeta + start',
+    track:cosKeys([[0.6,7.4],[3.2,0.6],[6.5,4.5],[9.3,0.6],[11.8,7.2]]), x0:0.6, x1:11.8, start:{x:2.6, range:[0.9,2.9]}, m:1.5, g:{value:9.81, options:['Měsíc','Mars','Země','Jupiter']},
+    budget:60, goal:{type:'apex', zone:[5.2,5.8], sideX:9.3},
+    task:'Máš jen 60 J a kulička má 1,5 kg. Kopec je vysoký 4,5 m, za ním zastav kuličku v pásmu 5,2–5,8 m. Na Zemi to nestačí. Vyber planetu a start.',
+    lesson:'Se slabší gravitací stačí na stejnou výšku méně energie: h = E / (m · g). Na Zemi dá 60 J jen 4,1 m, na Marsu skoro 11 m.' },
+
+  { name:'Skokánek na planetách', tags:'otázka',
+    track:cosKeys([[0.6,7.6],[5.6,1.2],[6.2,1.2]]), x0:0.6, x1:6.2, start:{x:2.8}, m:2, g:{value:9.81, options:['Měsíc','Mars','Země','Jupiter']},
+    goal:{type:'answer', kind:'choice', basket:{a:9.0, w:0.8, y:0.5},
+      options:['Jen na Měsíci','Jen na Zemi','Jen na Jupiteru','Na všech planetách stejně'], correct:3},
+    task:'Na Zemi kulička trefí košík. Na které planetě ho trefí, když nic jiného nezměníš? Nejdřív odpověz, potom si to vyzkoušej.',
+    hint:'Na Jupiteru je kulička na hraně rychlejší, ale zároveň padá rychleji k zemi. Co z toho vyhraje?',
+    lesson:'Gravitace se vykrátí. Silnější gravitace dá kuličce víc rychlosti, ale stejně rychleji stáhne kuličku dolů. Kulička doletí na všech planetách stejně daleko, jen za jiný čas.' },
+
+  { name:'Rozpočet a zeď', tags:'start + hmotnost',
+    track:cosKeys([[0.6,7.6],[3.2,0.6],[5.6,0.6],[8.0,4],[10.2,0.6],[11.8,6.4]]), x0:0.6, x1:11.8, start:{x:2.4, range:[0.9,2.8]}, m:{value:3, options:[1,2,3,4]}, g:9.81,
+    budget:150, wall:{x:4.4, J:50}, goal:{type:'apex', zone:[4.4,5.0], sideX:10.2},
+    task:'Rozpočet 150 J, zeď 50 J, za ní kopec 4 m a cílové pásmo 4,4–5,0 m. Najdi hmotnost a start, se kterými to vyjde.',
+    lesson:'Musí platit dvě věci zároveň: m·g·h ≤ 150 J a m·g·h − 50 J ≥ m·g·4 m. Vyhoví jen 2kg kulička startující výš než asi 6,6 m.' },
+
+  { name:'Kurýrní mistr', tags:'start + hmotnost + tření',
+    track:cosKeys([[0.6,7.4],[3.2,0.6],[11.4,0.6]]), x0:0.6, x1:11.4, start:{x:2.2, range:[0.9,2.8]}, m:{value:2, options:[1,2,3,4,5]}, g:9.81,
+    wall:{x:4.6, J:80}, friction:[{a:5.2, b:11.4, mu:0.2, adj:[0.05,0.8,0.01]}],
+    goal:{type:'stop', zone:[9.5,10.5], label:'GARÁŽ'},
+    task:'Prorazit zeď (80 J) a pak zabrzdit v garáži. Kombinuj start, hmotnost a tření.',
+    lesson:'Celá energie ze startu se rozdělila: 80 J na zeď a zbytek na teplo při brzdění. Energie nikam nezmizela.' },
+];
+
+let L = 0, lv, track, m, g, slow = false, state = 'place', tries = 0, runT = 0;
+let frics = [], basketA = 0, wallBroken = false, shards = [], demo = false, answered = false, apexH = null;
+const ball = { s:0, dir:1, Em:0, E0:0, startS:0, startH:0, angle:0, traveled:0, fx:0, fy:0, vx:0, vy:0, maxX:0, loss:0 };
+let progress = {};
+try { progress = JSON.parse(localStorage.getItem('kuryr3') || '{}'); } catch(e){ progress = {}; }
+const save = () => { try { localStorage.setItem('kuryr3', JSON.stringify(progress)); } catch(e){} };
+
+/* ---------- kód výsledku ----------
+   payload p = nejvyšší splněná úroveň (0–13) · 40 + hvězdy (0–39)  → 10 bitů
+   kód = (p XOR maska z příjmení) · 32768 + kontrolní součet(příjmení, p)  → 25 bitů = 5 znaků base32
+   Pro dané jméno je převod prostý a vratný; cizí jméno nebo překlep kontrolou neprojde. */
+const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const normName = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+function cyrb53(str, seed = 0){
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++){ const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+const mask = n => cyrb53(n + '|kuryr-maska', 7) % 1024;
+const check = (n, p) => cyrb53(n + '|' + p + '|kuryr-kontrola', 11) % 32768;
+function encode(name, highest, stars){
+  const n = normName(name), p = highest*40 + stars;
+  let v = (p ^ mask(n)) * 32768 + check(n, p), s = '';
+  for (let i = 0; i < 5; i++){ s = B32[v % 32] + s; v = Math.floor(v / 32); }
+  return s.slice(0,2) + '-' + s.slice(2);
+}
+function decode(name, code){
+  const n = normName(name);
+  const c = code.toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/O/g,'0').replace(/[IL]/g,'1');
+  if (!n || c.length !== 5) return null;
+  let v = 0; for (const ch of c){ const d = B32.indexOf(ch); if (d < 0) return null; v = v*32 + d; }
+  const p = Math.floor(v / 32768) ^ mask(n);
+  if (p >= 560 || v % 32768 !== check(n, p)) return null;
+  const highest = Math.floor(p / 40), stars = p % 40;
+  if (stars > highest*3) return null;
+  return { highest, stars };
+}
+function summary(){
+  let highest = 0, stars = 0;
+  for (const k in progress){ highest = Math.max(highest, +k + 1); stars += progress[k]; }
+  return { highest, stars, done: Object.keys(progress).length };
+}
+function updateCode(){
+  const name = $('pname').value, sm = summary();
+  if (!normName(name)){ $('pcode').textContent = '—'; $('pinfo').textContent = 'Nejdřív napiš příjmení.'; return; }
+  $('pcode').textContent = encode(name, sm.highest, sm.stars);
+  $('pinfo').textContent = `Nejvyšší splněná úroveň: ${sm.highest} z ${LEVELS.length} · hvězdy: ${sm.stars}`;
+}
+
+/* ---------- dráha ---------- */
+function buildTrack(f, x0, x1){
+  const xs = [x0], ys = [f(x0)]; let px = x0, py = f(x0), acc = 0;
+  for (let x = x0; x <= x1 + 1e-9; x += 0.002){ const y = f(x); acc += Math.hypot(x-px, y-py); px = x; py = y; if (acc >= DS){ xs.push(x); ys.push(y); acc = 0; } }
+  return { xs, ys, n: xs.length, L: (xs.length-1)*DS };
+}
+function idx(s){ const f = Math.max(0, Math.min(track.L, s))/DS; const i = Math.min(track.n-2, Math.floor(f)); return [i, f-i]; }
+const hAt = s => { const [i,f] = idx(s); return track.ys[i]*(1-f) + track.ys[i+1]*f; };
+const xAt = s => { const [i,f] = idx(s); return track.xs[i]*(1-f) + track.xs[i+1]*f; };
+const slopeAt = s => (hAt(s+DS) - hAt(s-DS)) / (2*DS);
+function sOfX(x){ let b = 0, bd = 1e9; for (let i = 0; i < track.n; i++){ const d = Math.abs(track.xs[i]-x); if (d < bd){ bd = d; b = i; } } return b*DS; }
+const muAt = x => { for (const f of frics) if (x >= f.a && x <= f.b) return f.mu; return 0; };
+
+/* ---------- úroveň ---------- */
+const mOpts = () => typeof lv.m === 'object' ? lv.m : null;
+const gOpts = () => typeof lv.g === 'object' ? lv.g : null;
+function loadLevel(i){
+  L = i; lv = LEVELS[i]; tries = 0;
+  track = buildTrack(lv.track, lv.x0, lv.x1);
+  m = mOpts() ? lv.m.value : lv.m;
+  g = gOpts() ? lv.g.value : lv.g;
+  frics = (lv.friction || []).map(f => ({...f}));
+  basketA = lv.goal.basket ? lv.goal.basket.a : 0;
+  $('lvnum').textContent = `Úroveň ${i+1} / ${LEVELS.length}`;
+  $('lvname').textContent = lv.name; $('lvtask').textContent = lv.task;
+  demo = false; answered = false;
+  const isQ = lv.goal.type === 'answer', best = progress[i] || 0;
+  $('starInfo').innerHTML = (isQ ? (lv.goal.kind === 'height' ? 'Hvězdy podle přesnosti odpovědi: ★★★ do 0,1 m · ★★ do 0,2 m · ★ do 0,3 m.' : 'Správná odpověď = ★★★.')
+    : 'Hvězdy podle přesnosti: ★★★ nejužší tmavý pruh · ★★ prostřední · ★ celý cíl.')
+    + ` Pokusů máš neomezeně. Další úroveň se odemkne s aspoň jednou hvězdou. Nejlepší výsledek: ${starStr(best)}`;
+  buildAnswer();
+  buildControls();
+  place(sOfX(lv.start.x));
+  renderLevels();
+}
+const isAnswer = () => lv.goal.type === 'answer';
+const grade = (v, c, half) => { const d = Math.abs(v - c)/half; return d <= 0.35 ? 3 : d <= 0.65 ? 2 : d <= 1 ? 1 : 0; };
+const starStr = st => `<span class="stars">${'★'.repeat(st)}${'☆'.repeat(3-st)}</span>`;
+const BANDS = [1, 0.65, 0.35];
+function buildAnswer(){
+  const box = $('answerBox'); box.innerHTML = ''; box.hidden = !isAnswer();
+  if (!isAnswer()) return;
+  const G = lv.goal;
+  if (G.kind === 'height'){
+    box.innerHTML = '<label class="label" for="ansIn">Tvoje odpověď</label><div class="ans"><input type="text" id="ansIn" inputmode="decimal" placeholder="např. 3,5"><span>m</span><button type="button" class="go" id="ansGo">Odpovědět</button></div>';
+    const send = () => { const v = parseFloat($('ansIn').value.replace(',', '.')); if (isNaN(v)) return; submitAnswer(grade(v, ball.startH - lv.wall.J/(m*g), G.tol)); };
+    $('ansGo').onclick = send; $('ansIn').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  } else {
+    box.innerHTML = '<span class="label">Tvoje odpověď</span><div class="choices"></div>';
+    G.options.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o; b.onclick = () => submitAnswer(i === G.correct ? 3 : 0, b); box.lastChild.appendChild(b); });
+  }
+}
+function submitAnswer(st, btn){
+  tries++; updateReadouts();
+  const r = $('result'); r.hidden = false;
+  if (st > 0){
+    answered = true;
+    progress[L] = Math.max(progress[L] || 0, st); save();
+    if (btn) btn.setAttribute('aria-pressed', 'true');
+    r.className = 'result win';
+    r.innerHTML = `<b>${st === 3 ? 'Přesně!' : 'Skoro!'} ${starStr(st)}</b>${st < 3 ? '<p>Odpověď je blízko, ale ne úplně přesná. Můžeš ji opravit a získat víc hvězd.</p>' : ''}<p>${lv.lesson}</p><p>Stiskni Pustit a ověř si to.</p>`;
+    $('go').disabled = false; $('hint').textContent = 'Stiskni Pustit a ověř si odpověď';
+    $('next').hidden = L >= LEVELS.length-1; $('retry').hidden = true;
+    renderLevels();
+  } else {
+    if (btn) btn.disabled = true;
+    r.className = 'result lose';
+    r.innerHTML = `<b>To není správně</b><p>${tries >= 2 && lv.hint ? 'Nápověda: ' + lv.hint : 'Zkus to spočítat znovu.'}</p>`;
+  }
+}
+function buildControls(){
+  const box = $('controls'); box.innerHTML = '';
+  const add = html => { const d = document.createElement('div'); d.className = 'ctl'; d.innerHTML = html; box.appendChild(d); return d; };
+  if (lv.start.range) add('<div class="top"><span>Start kuličky</span><output>táhni po modré</output></div>');
+  if (mOpts()){
+    const d = add('<div class="top"><span>Hmotnost</span></div><div class="row"></div>');
+    lv.m.options.forEach(v => { const b = document.createElement('button'); b.type = 'button'; b.textContent = v + ' kg'; b.setAttribute('aria-pressed', v === m);
+      b.onclick = () => { if (busy()) return; m = v; [...b.parentNode.children].forEach(x => x.setAttribute('aria-pressed', x === b)); place(ball.s); };
+      d.lastChild.appendChild(b); });
+  }
+  if (gOpts()){
+    const d = add('<div class="top"><span>Planeta</span><output id="gOut"></output></div><div class="row"></div>');
+    lv.g.options.forEach(p => { const b = document.createElement('button'); b.type = 'button'; b.textContent = p; b.setAttribute('aria-pressed', PLANETS[p] === g);
+      b.onclick = () => { if (busy()) return; g = PLANETS[p]; [...b.parentNode.children].forEach(x => x.setAttribute('aria-pressed', x === b)); place(ball.s); };
+      d.lastChild.appendChild(b); });
+  }
+  frics.forEach((f, i) => { if (!f.adj) return;
+    const d = add(`<div class="top"><label for="mu${i}">Tření brzdného pásu</label><output id="muOut${i}">${fmt(f.mu,2)}</output></div><input type="range" id="mu${i}" min="${f.adj[0]}" max="${f.adj[1]}" step="${f.adj[2]}" value="${f.mu}">`);
+    d.querySelector('input').oninput = e => { if (busy()) { e.target.value = f.mu; return; } f.mu = +e.target.value; $('muOut'+i).textContent = fmt(f.mu,2); resetAfterLose(); };
+  });
+  const bk = lv.goal.basket;
+  if (bk && bk.adj){
+    const d = add(`<div class="top"><label for="bk">Poloha košíku</label><output id="bkOut"></output></div><input type="range" id="bk" min="${bk.adj[0]}" max="${bk.adj[1]}" step="${bk.adj[2]}" value="${basketA}">`);
+    d.querySelector('input').oninput = e => { if (busy()) { e.target.value = basketA; return; } basketA = +e.target.value; updateReadouts(); resetAfterLose(); };
+  }
+  if (!box.children.length) add('<span>nic</span>');
+}
+const busy = () => state === 'run' || state === 'fly';
+function resetAfterLose(){ if (state === 'done'){ const t = tries; place(ball.startS); tries = t; updateReadouts(); } }
+const sMin = () => lv.start.range ? sOfX(lv.start.range[0]) : sOfX(lv.start.x);
+const sMax = () => lv.start.range ? sOfX(lv.start.range[1]) : sOfX(lv.start.x);
+const hCap = () => lv.budget ? lv.budget/(m*g) : Infinity;
+
+function place(s){
+  s = Math.max(sMin(), Math.min(sMax(), s));
+  if (lv.budget){ let k = 0; while (hAt(s) > hCap() && k++ < 400) s += DS*(slopeAt(s) < 0 ? 1 : -1); }
+  ball.s = s; ball.startS = s; ball.startH = hAt(s); ball.fx = 0; ball.angle = 0;
+  ball.E0 = ball.Em = m*g*ball.startH; ball.traveled = 0; ball.maxX = xAt(s); ball.loss = 0;
+  wallBroken = false; shards = [];
+  state = 'place';
+  apexH = null;
+  if (!(isAnswer() && answered)){ $('result').hidden = true; $('next').hidden = true; $('retry').hidden = true; }
+  $('go').disabled = isAnswer() && !answered;
+  $('hint').textContent = isAnswer() ? (answered ? 'Stiskni Pustit a ověř si odpověď' : 'Nejdřív odpověz na otázku') : lv.start.range ? 'Posuň kuličku po modré části a stiskni Pustit' : 'Kulička je pevně na místě. Změň něco jiného.';
+  updateReadouts();
+}
+function updateReadouts(){
+  const f = $('fixed'); const rows = [];
+  rows.push(['Výška startu', fmt(ball.startH) + ' m' + (lv.start.range ? '' : ' (pevná)')]);
+  if (!mOpts()) rows.push(['Hmotnost', fmt(m) + ' kg']); else rows.push(['Zvolená hmotnost', fmt(m) + ' kg']);
+  if (!gOpts()) rows.push(['Gravitace', fmt(g,2) + ' N/kg (' + planetOf(g) + ')']); else rows.push(['Gravitace', fmt(g,2) + ' N/kg']);
+  frics.forEach(fr => { if (!fr.adj) rows.push(['Tření pásu', fmt(fr.mu,2)]); });
+  if (!frics.length) rows.push(['Tření', 'žádné']);
+  if (lv.wall) rows.push(['Zeď vydrží', lv.wall.J + ' J']);
+  if (lv.budget) rows.push(['Rozpočet energie', lv.budget + ' J']);
+  if (lv.goal.basket) rows.push(['Košík', fmt(basketA) + '–' + fmt(basketA + lv.goal.basket.w) + ' m']);
+  f.innerHTML = rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
+  if ($('gOut')) $('gOut').textContent = 'g = ' + fmt(g,2);
+  if ($('bkOut')) $('bkOut').textContent = fmt(basketA) + ' m';
+  $('rEp').textContent = Math.round(m*g*ball.startH) + ' J' + (lv.budget ? ` z ${lv.budget} J` : '');
+  $('rTries').textContent = tries;
+}
+function go(){
+  if (isAnswer()){ if (!answered) return; if (state === 'done') place(ball.startS); demo = true; }
+  if (state !== 'place') return;
+  if (!demo){ tries++; updateReadouts(); }
+  ball.E0 = ball.Em = m*g*ball.startH; ball.traveled = 0; ball.loss = 0; runT = 0;
+  ball.dir = slopeAt(ball.s) > 0 ? -1 : 1;
+  state = 'run'; $('go').disabled = true; $('hint').textContent = 'Kulička jede…';
+}
+
+/* ---------- vyhodnocení ---------- */
+function finish(win, msg, st = 3, detail = ''){
+  if (state === 'done') return;
+  state = 'done';
+  if (demo){
+    $('go').disabled = false;
+    $('hint').textContent = apexH != null ? `Kulička vyjela do ${fmt(apexH)} m` : win ? 'Trefa! Zkus jinou planetu.' : (msg || 'Hotovo');
+    return;
+  }
+  const r = $('result'); r.hidden = false; r.className = 'result ' + (win ? 'win' : 'lose');
+  if (win){
+    progress[L] = Math.max(progress[L] || 0, st); save();
+    $('retry').hidden = st === 3;
+    const word = st === 3 ? 'Přesně do středu!' : st === 2 ? 'Doručeno, skoro přesně.' : 'Doručeno, ale jen na kraj.';
+    r.innerHTML = `<b>${word} ${starStr(st)}</b>${detail ? `<p>${detail}</p>` : ''}${st < 3 ? '<p>Pro víc hvězd se trefi do užšího, tmavšího pruhu.</p>' : ''}<p>${lv.lesson}</p>`;
+    $('next').hidden = L >= LEVELS.length-1; $('hint').textContent = 'Hotovo!';
+    renderLevels();
+  } else {
+    r.innerHTML = `<b>Nedoručeno</b><p>${msg}</p>`;
+    $('hint').textContent = 'Uprav nastavení a zkus to znovu';
+    setTimeout(() => { if (state === 'done' && r.classList.contains('lose')){ const t = tries; const keep = r.innerHTML; place(ball.startS); tries = t; updateReadouts(); r.hidden = false; r.className = 'result lose'; r.innerHTML = keep; } }, 1800);
+  }
+}
+const energyWord = low => low ? 'měla málo energie' : 'měla energie moc';
+function onTurn(x, h){
+  const G = lv.goal;
+  if (G.type === 'answer' && G.kind === 'height' && x > G.sideX){ apexH = h; finish(true); return; }
+  if (G.type === 'apex'){
+    const [a,b] = G.zone;
+    const c0 = (a+b)/2, st = grade(h, c0, (b-a)/2);
+    if (x <= G.sideX) finish(false, `Kulička se otočila ve výšce ${fmt(h)} m ještě před cílovou rampou. Měla málo energie.`);
+    else if (st) finish(true, '', st, `Kulička vyjela do ${fmt(h,2)} m, střed cíle je ${fmt(c0,2)} m.`);
+    else finish(false, `Kulička se zastavila ve výšce ${fmt(h)} m, cíl je ${fmt(a)}–${fmt(b)} m. Kulička ${energyWord(h < a)}.`);
+  }
+  if (G.type === 'pass' && x < G.x) finish(false, `Kulička se otočila ve výšce ${fmt(h)} m a do cíle nedojela.`);
+}
+function onRest(x){
+  const G = lv.goal;
+  if (G.type === 'stop'){
+    const [a,b] = G.zone;
+    const c0 = (a+b)/2, st = grade(x, c0, (b-a)/2);
+    if (st) finish(true, '', st, `Kulička zastavila na ${fmt(x,2)} m, střed garáže je ${fmt(c0,2)} m.`);
+    else finish(false, `Kulička zastavila na ${fmt(x)} m, garáž je na ${fmt(a)}–${fmt(b)} m. Brzdila ${x < a ? 'moc' : 'málo'}.`);
+  } else if (G.type === 'pass') finish(false, 'Kulička zůstala stát na vrcholu. Chybělo jen trochu energie.');
+  else finish(false, 'Kulička se zastavila.');
+}
+
+/* ---------- fyzika ---------- */
+function step(dt){
+  if (state === 'fly') return stepFly(dt);
+  if (state !== 'run') return;
+  runT += dt;
+  if (runT > 40){ finish(false, 'Kulička pořád jezdí sem a tam. Bez tření nikdy nezastaví.'); return; }
+  const n = 16, h = dt/n;
+  for (let k = 0; k < n && state === 'run'; k++){
+    const hs = hAt(ball.s), v2 = 2*(ball.Em/m - g*hs);
+    if (v2 <= 1e-6){
+      if (ball.traveled > 0.2){ onTurn(xAt(ball.s), hs); if (state !== 'run') return; }
+      const sl = slopeAt(ball.s);
+      if (Math.abs(sl) < 0.02){ onRest(xAt(ball.s)); return; }
+      ball.dir = sl > 0 ? -1 : 1; ball.s = Math.max(0, Math.min(track.L, ball.s + ball.dir*0.002));
+      continue;
+    }
+    const v = Math.sqrt(v2);
+    let ns = ball.s + ball.dir*v*h;
+    if (lv.goal.basket && ns >= track.L && ball.dir > 0){ launch(v); return; }
+    // zeď
+    if (lv.wall && !wallBroken && ball.dir > 0 && xAt(ns) + R >= lv.wall.x){
+      const ek = ball.Em - m*g*hs;
+      if (ek >= lv.wall.J){ wallBroken = true; ball.Em -= lv.wall.J; ball.loss += lv.wall.J; burst(); }
+      else { finish(false, `Náraz měl jen ${Math.round(ek)} J pohybové energie, zeď vydrží ${lv.wall.J} J.`); return; }
+    }
+    if (ns <= 0 || ns >= track.L){ ns = Math.max(0, Math.min(track.L, ns)); ball.dir *= -1; }
+    if (2*(ball.Em/m - g*hAt(ns)) < 0){
+      if (ball.traveled > 0.2){ onTurn(xAt(ball.s), hs); if (state !== 'run') return; }
+      ball.dir *= -1; continue;
+    }
+    const d = Math.abs(ns - ball.s);
+    ball.Em -= muAt(xAt(ball.s))*m*g*d;
+    const floor = m*g*hAt(ns); if (ball.Em < floor) ball.Em = floor;
+    ball.angle += (ns - ball.s)/R; ball.traveled += d; ball.s = ns;
+    const x = xAt(ns); ball.maxX = Math.max(ball.maxX, x);
+    if (lv.goal.type === 'pass' && x > lv.goal.x) finish(true);
+    if (lv.goal.type === 'stop' && x > lv.goal.zone[1] + 0.3) { finish(false, 'Kulička projela garáží. Brzdila málo, nebo měla energie moc.'); return; }
+  }
+}
+function launch(v){
+  state = 'fly';
+  ball.fx = xAt(track.L); ball.fy = hAt(track.L) + LIFT;
+  const tx = xAt(track.L) - xAt(track.L - DS), ty = hAt(track.L) - hAt(track.L - DS), tl = Math.hypot(tx,ty);
+  ball.vx = v*tx/tl; ball.vy = v*ty/tl;
+}
+function stepFly(dt){
+  const n = 8, h = dt/n, b = lv.goal.basket, a = basketA, bb = a + b.w;
+  for (let k = 0; k < n && state === 'fly'; k++){
+    const py = ball.fy;
+    ball.vy -= g*h; ball.fx += ball.vx*h; ball.fy += ball.vy*h; ball.angle += ball.vx*h/R;
+    const c0 = (a+bb)/2, half = b.w/2 + R*0.6;
+    if (py >= b.y + R && ball.fy < b.y + R){
+      const st = grade(ball.fx, c0, half);
+      if (st){ const lx = ball.fx; ball.fy = R + 0.05; ball.fx = Math.min(bb - R*0.5, Math.max(a + R*0.5, lx)); finish(true, '', st, `Kulička přiletěla na ${fmt(lx,2)} m, střed košíku je ${fmt(c0,2)} m.`); return; }
+    }
+    if (ball.fy <= R){ ball.fy = R; finish(false, `Kulička dopadla na ${fmt(ball.fx)} m, košík byl na ${fmt(a)}–${fmt(bb)} m.`); return; }
+    if (ball.fx > W + 1){ finish(false, 'Kulička přeletěla celou plochu.'); return; }
+  }
+}
+function burst(){
+  const w = lv.wall, base = hAt(sOfX(w.x));
+  for (let i = 0; i < 14; i++) shards.push({ x: w.x + Math.random()*0.3, y: base + Math.random()*1.2, vx: 1 + Math.random()*3, vy: Math.random()*3, r: Math.random()*6 });
+}
+function stepShards(dt){ shards.forEach(p => { p.vy -= 9.81*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.r += dt*4; if (p.y < 0.1){ p.y = 0.1; p.vx *= 0.8; p.vy = 0; } }); }
+
+/* ---------- kreslení ---------- */
+let k = 1, dpr = 1;
+function resize(){ const r = cv.getBoundingClientRect(); dpr = window.devicePixelRatio || 1; cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.width*2/3*dpr); k = r.width/W; }
+const X = x => x*k, Y = y => (H - y)*k;
+const TOK = ['paper','grid','grid-strong','ink','muted','ep','ek','heat','goal','goal-fill','heat-fill','bad','brick','track-fill','ball','ball-hi'];
+function css(){ const s = getComputedStyle(document.documentElement); const o = {}; TOK.forEach(n => o[n] = s.getPropertyValue('--'+n).trim()); return o; }
+const font = (w, sz) => `${w} ${Math.max(11, k*sz)}px "IBM Plex Sans", sans-serif`;
+function hline(c, y, color, label, dash){
+  ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, Y(y)); ctx.lineTo(W*k, Y(y)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = color; ctx.font = font(600, .24); ctx.fillText(label, W*k - ctx.measureText(label).width - 8, Y(y) - 6);
+}
+function pathTrack(a, b){
+  const s0 = sOfX(a), s1 = sOfX(b); ctx.beginPath();
+  for (let s = s0; s <= s1; s += DS) s === s0 ? ctx.moveTo(X(xAt(s)), Y(hAt(s))) : ctx.lineTo(X(xAt(s)), Y(hAt(s)));
+}
+function draw(){
+  const c = css(); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const cw = W*k, ch = H*k;
+  ctx.fillStyle = c.paper; ctx.fillRect(0,0,cw,ch);
+  for (let i = 0; i <= W*2; i++){ ctx.strokeStyle = i%2 ? c.grid : c['grid-strong']; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(i/2)+.5,0); ctx.lineTo(X(i/2)+.5,ch); ctx.stroke(); }
+  for (let j = 0; j <= H*2; j++){ ctx.strokeStyle = j%2 ? c.grid : c['grid-strong']; ctx.beginPath(); ctx.moveTo(0,Y(j/2)+.5); ctx.lineTo(cw,Y(j/2)+.5); ctx.stroke(); }
+  ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.22)}px "IBM Plex Mono", monospace`;
+  for (let j = 1; j < H; j++) ctx.fillText(j + ' m', 4, Y(j) - 4);
+  for (let i = 2; i < W; i += 2) ctx.fillText(i + ' m', X(i) + 3, ch - 4);
+
+  const G = lv.goal;
+  if (G.type === 'apex'){
+    const [a,b] = G.zone, c0 = (a+b)/2, hf = (b-a)/2;
+    BANDS.forEach(f => { ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(G.sideX), Y(c0 + hf*f), cw - X(G.sideX), (Y(c0 - hf*f) - Y(c0 + hf*f))); });
+    const fy = c0; let fx = G.sideX;
+    for (let s = sOfX(G.sideX); s < track.L; s += DS) if (hAt(s) >= fy){ fx = xAt(s); break; }
+    fx += 0.35;
+    ctx.strokeStyle = c.goal; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(fx), Y(fy)); ctx.lineTo(X(fx), Y(fy+1)); ctx.stroke();
+    ctx.fillStyle = c.goal; ctx.beginPath(); ctx.moveTo(X(fx), Y(fy+1)); ctx.lineTo(X(fx+0.6), Y(fy+0.8)); ctx.lineTo(X(fx), Y(fy+0.6)); ctx.fill();
+  }
+  if (G.type === 'pass'){ ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(G.x), 0, cw - X(G.x), ch); ctx.fillStyle = c.goal; ctx.font = font(700,.28); ctx.fillText('CÍL', X(G.x) + 8, 22); }
+  if (G.type === 'stop'){
+    const [a,b] = G.zone, c0 = (a+b)/2, hf = (b-a)/2;
+    BANDS.forEach(f => { ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(c0 - hf*f), Y(2.4), (X(c0 + hf*f) - X(c0 - hf*f)), Y(0.6)-Y(2.4)); });
+    ctx.strokeStyle = c.goal; ctx.lineWidth = 2; ctx.strokeRect(X(a), Y(2.4), X(b)-X(a), Y(0.6)-Y(2.4));
+    ctx.fillStyle = c.goal; ctx.font = font(700,.24); ctx.fillText(G.label, X(a) + 6, Y(2.4) + 18);
+  }
+  if (G.basket){
+    const b = G.basket, a = basketA, bb = a + b.w;
+    ctx.strokeStyle = c['grid-strong']; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, Y(0)-1); ctx.lineTo(cw, Y(0)-1); ctx.stroke();
+    const c0 = (a+bb)/2, hf = b.w/2 + R*0.6;
+    BANDS.forEach(f => { const l = Math.max(a, c0 - hf*f), r2 = Math.min(bb, c0 + hf*f); ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(l), Y(b.y), X(r2) - X(l), Y(0)-Y(b.y)); });
+    ctx.strokeStyle = c.goal; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(a), Y(b.y)); ctx.lineTo(X(a), Y(0)); ctx.lineTo(X(bb), Y(0)); ctx.lineTo(X(bb), Y(b.y)); ctx.stroke();
+  }
+
+  // dráha
+  ctx.beginPath(); ctx.moveTo(X(track.xs[0]), Y(0));
+  for (let i = 0; i < track.n; i++) ctx.lineTo(X(track.xs[i]), Y(track.ys[i]));
+  ctx.lineTo(X(track.xs[track.n-1]), Y(0)); ctx.closePath(); ctx.fillStyle = c['track-fill']; ctx.fill();
+  ctx.beginPath(); for (let i = 0; i < track.n; i++) i ? ctx.lineTo(X(track.xs[i]), Y(track.ys[i])) : ctx.moveTo(X(track.xs[i]), Y(track.ys[i]));
+  ctx.strokeStyle = c.ink; ctx.lineWidth = Math.max(3, k*0.09); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+  // tření
+  frics.forEach(f => {
+    pathTrack(f.a, f.b); ctx.strokeStyle = c.heat; ctx.globalAlpha = Math.min(1, 0.25 + f.mu*1.2); ctx.lineWidth = Math.max(6, k*0.2); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = c.heat; ctx.font = font(600,.22); ctx.fillText('tření ' + fmt(f.mu,2), X(f.a) + 6, Y(hAt(sOfX(f.a))) + Math.max(18, k*.42));
+  });
+  // rozsah startu
+  if (lv.start.range){ pathTrack(lv.start.range[0], lv.start.range[1]); ctx.strokeStyle = c.ep; ctx.globalAlpha = .45; ctx.lineWidth = Math.max(7, k*0.2); ctx.stroke(); ctx.globalAlpha = 1; }
+  // zeď
+  if (lv.wall){
+    const w = lv.wall, base = hAt(sOfX(w.x));
+    if (!wallBroken){
+      const bw = 0.3, bh = 0.3;
+      for (let r = 0; r < 4; r++) for (let q = 0; q < 1; q++){
+        ctx.fillStyle = c.brick; ctx.fillRect(X(w.x), Y(base + (r+1)*bh), bw*k - 1, bh*k - 2);
+      }
+      ctx.fillStyle = c.brick; ctx.font = font(700,.24); ctx.fillText('zeď ' + w.J + ' J', X(w.x) - 0.2*k, Y(base + 1.4));
+    }
+    shards.forEach(p => { ctx.save(); ctx.translate(X(p.x), Y(p.y)); ctx.rotate(p.r); ctx.fillStyle = c.brick; ctx.fillRect(-0.07*k, -0.05*k, 0.14*k, 0.1*k); ctx.restore(); });
+  }
+  if (lv.budget) hline(c, hCap(), c.bad, `strop rozpočtu ${fmt(hCap())} m`, [3,4]);
+  hline(c, ball.startH, c.ep, 'start ' + fmt(ball.startH) + ' m', [8,6]);
+  if (apexH != null) hline(c, apexH, c.goal, 'vyjela do ' + fmt(apexH) + ' m', [2,4]);
+
+  // kulička
+  let bx, by;
+  if (state === 'fly' || ball.fx){ bx = ball.fx; by = ball.fy; }
+  else {
+    const s = ball.s; let tx = xAt(s+DS) - xAt(s-DS), ty = hAt(s+DS) - hAt(s-DS); const tl = Math.hypot(tx,ty) || 1; tx /= tl; ty /= tl;
+    let nx = -ty, ny = tx; if (ny < 0){ nx = -nx; ny = -ny; }
+    bx = xAt(s) + nx*LIFT; by = hAt(s) + ny*LIFT;
+  }
+  const r = R*k*Math.min(1.25, 0.8 + m*0.08);
+  ctx.beginPath(); ctx.arc(X(bx), Y(by), r, 0, Math.PI*2); ctx.fillStyle = c.ball; ctx.fill();
+  ctx.strokeStyle = c['ball-hi']; ctx.lineWidth = 2; ctx.globalAlpha = .7;
+  ctx.beginPath(); ctx.moveTo(X(bx), Y(by)); ctx.lineTo(X(bx) + Math.cos(ball.angle)*r*.8, Y(by) + Math.sin(ball.angle)*r*.8); ctx.stroke();
+  ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(X(bx)-r*.3, Y(by)-r*.3, r*.28, 0, Math.PI*2); ctx.fillStyle = c['ball-hi']; ctx.fill(); ctx.globalAlpha = 1;
+  if (mOpts()){ ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.2)}px "IBM Plex Mono", monospace`; ctx.fillText(m + ' kg', X(bx) + r + 4, Y(by) - r); }
+}
+
+function meters(){
+  let ep, ek;
+  if (state === 'fly' || ball.fx){ ep = m*g*Math.max(0, ball.fy - LIFT); ek = 0.5*m*(ball.vx*ball.vx + ball.vy*ball.vy); }
+  else { ep = m*g*hAt(ball.s); ek = Math.max(0, ball.Em - ep); }
+  const lost = Math.max(0, ball.E0 - ball.Em), tot = Math.max(1, ball.E0);
+  $('fEp').style.width = Math.min(100, ep/tot*100) + '%';
+  $('fEk').style.width = Math.min(100, ek/tot*100) + '%';
+  $('fHeat').style.width = Math.min(100, lost/tot*100) + '%';
+}
+
+function renderLevels(){
+  const nav = $('levels'); nav.innerHTML = '';
+  LEVELS.forEach((l, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'lv'; b.setAttribute('aria-pressed', i === L);
+    const st = progress[i] || 0;
+    b.innerHTML = `<span>${i+1}. ${l.name}</span><span class="tags">mění se: ${l.tags}</span><small class="stars">${st ? '★'.repeat(st) + '☆'.repeat(3-st) : '☆☆☆'}</small>`;
+    const locked = i > 0 && !progress[i-1];
+    if (locked){ b.disabled = true; b.title = 'Nejdřív získej hvězdu v předchozí úrovni'; b.querySelector('.tags').textContent = 'zamčeno'; }
+    b.onclick = () => loadLevel(i); nav.appendChild(b);
+  });
+  updateCode();
+}
+
+/* jméno a učitelská kontrola */
+try { $('pname').value = localStorage.getItem('kuryrName') || ''; } catch(e){}
+const plain = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+$('pname').addEventListener('input', () => { const el = $('pname'), v = plain(el.value); if (v !== el.value){ const pos = el.selectionStart; el.value = v; try { el.setSelectionRange(pos, pos); } catch(e){} } try { localStorage.setItem('kuryrName', $('pname').value); } catch(e){} updateCode(); });
+const esc = s => s.replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+$('tgo').onclick = () => {
+  const rows = $('tin').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const tb = $('tout').querySelector('tbody'); tb.innerHTML = '';
+  rows.forEach(line => {
+    const m = line.match(/^(.*)[;\t,]\s*([0-9A-Za-z-]+)\s*$/);
+    const name = m ? m[1].trim() : line, code = m ? m[2] : '';
+    const r = m ? decode(name, code) : null;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(plain(name))}</td><td><code>${esc(code)}</code></td><td>${r ? r.highest + ' / ' + LEVELS.length : '–'}</td><td>${r ? r.stars : '–'}</td><td class="${r ? 'ok' : 'bad'}">${r ? 'platný' : 'neplatný'}</td>`;
+    tb.appendChild(tr);
+  });
+  $('tout').hidden = !rows.length;
+};
+function route(){ const t = location.hash === '#ucitel'; $('ucitel').hidden = !t; if (t) $('ucitel').scrollIntoView({block:'start'}); }
+window.addEventListener('hashchange', route);
+route();
+
+/* ---------- ovládání ---------- */
+let dragging = false;
+function toWorld(ev){ const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left)/k, y: H - (ev.clientY - r.top)/k }; }
+function nearestStart(p){
+  let best = sMin(), bd = 1e9;
+  for (let s = sMin(); s <= sMax(); s += DS){ const d = Math.hypot(xAt(s)-p.x, hAt(s)-p.y); if (d < bd){ bd = d; best = s; } }
+  return { s: best, d: bd };
+}
+cv.addEventListener('pointerdown', ev => {
+  if (busy() || !lv.start.range) return;
+  const q = nearestStart(toWorld(ev));
+  if (q.d < 2){ cv.setPointerCapture(ev.pointerId); dragging = true; const t = tries; place(q.s); tries = t; updateReadouts(); }
+});
+cv.addEventListener('pointermove', ev => { if (dragging){ const t = tries; place(nearestStart(toWorld(ev)).s); tries = t; updateReadouts(); } });
+cv.addEventListener('pointerup', () => { dragging = false; });
+cv.addEventListener('pointercancel', () => { dragging = false; });
+$('go').onclick = go;
+$('reset').onclick = () => { if (busy() || state === 'done'){ const t = tries; place(ball.startS); tries = t; updateReadouts(); } };
+$('slow').onclick = e => { slow = !slow; e.currentTarget.setAttribute('aria-pressed', slow); };
+$('next').onclick = () => loadLevel(Math.min(LEVELS.length-1, L+1));
+$('retry').onclick = () => { const t = tries; place(ball.startS); tries = t; updateReadouts(); };
+
+let last = performance.now();
+function frame(t){
+  const dt = Math.min(0.033, (t - last)/1000) * (slow ? 0.25 : 1); last = t;
+  step(dt); stepShards(dt); draw(); meters();
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize', resize);
+resize(); { let start = 0; while (start < LEVELS.length-1 && progress[start]) start++; loadLevel(start); }
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
