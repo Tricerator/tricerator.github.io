@@ -3,12 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Kuličkový kurýr – hra o polohové a pohybové energii pro 8. ročník.">
 <style>
 html{-webkit-text-size-adjust:100%}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font-size:14px;font-family:system-ui,sans-serif}
-*,*::before,*::after{box-sizing:border-box}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
@@ -242,12 +240,18 @@ const LEVELS = [
     task:'Dostaň kuličku přes kopec vysoký 5 m a zastav ji na pravé rampě v zeleném pásmu (5,6–6,4 m).',
     lesson:'Na vrcholu potřebuje kulička polohovou energii m·g·5 m, takže musí začít výš než 5 m.' },
 
-  { name:'Jak vysoko vyjede?', tags:'otázka',
+  { name:'Postav zeď', tags:'pevnost zdi',
     track:cosKeys([[0.6,6.6],[3.2,0.6],[5.6,0.6],[11.8,7.2]]), x0:0.6, x1:11.8, start:{x:1.13}, m:2, g:9.81,
-    wall:{x:4.4, J:40}, goal:{type:'answer', kind:'height', sideX:5.6, tol:0.3},
-    task:'Kulička (2 kg) vyjede z výšky na startu, prorazí zeď a vyjede na pravou rampu. Do jaké výšky vyjede? Spočítej a napiš odpověď v metrech.',
-    hint:'Zeď si vezme 40 J. Spočítej, kolik metrů výšky to je pro 2kg kuličku: h = E / (m · g).',
-    lesson:'Zeď si vzala 40 J, to je pro 2kg kuličku 40 / (2 · 9,81) ≈ 2,0 m výšky. Kulička proto vyjede asi o 2 m níž, než odkud vyjela.' },
+    wall:{x:4.4, J:20, adj:[10,100,1]}, goal:{type:'apex', zone:[3.2,3.8], sideX:5.6},
+    task:'Tentokrát stavíš zeď ty. Nastav její pevnost tak, aby ji kulička prorazila a pak se na pravé rampě zastavila v zeleném pásmu.',
+    lesson:'Čím pevnější zeď, tím víc energie jí kulička musí odevzdat a tím níž pak vyjede. Moc pevná zeď kuličku zastaví úplně.' },
+
+  { name:'Beranidlo', tags:'výška pádu',
+    track:x => 0, x0:0.6, x1:11.4, start:{x:1}, m:5, g:9.81,
+    drop:{x:6, h:3.5, range:[2.7,7.4], ground:1.2, top:2.4, len:2.0, F:250},
+    goal:{type:'drop', zone:[1.35,1.75]},
+    task:'Závaží padá na kolík a zatluče ho do země. Nastav výšku pádu tak, aby hlava kolíku skončila v zeleném pásmu.',
+    lesson:'Při pádu se polohová energie mění na pohybovou. Při nárazu ji závaží předá kolíku a půda ji změní na teplo. Z větší výšky = víc energie = hlubší zatlučení.' },
 
   { name:'Rozbij zeď', tags:'hmotnost',
     track:cosKeys([[0.6,5.2],[3.2,0.6],[11.8,0.6]]), x0:0.6, x1:11.8, start:{x:0.9}, m:{value:1, options:[1,2,3,4,5,6]}, g:9.81,
@@ -281,6 +285,13 @@ const LEVELS = [
     task:'Výška i hmotnost jsou dané. Zeď vydrží 60 J, za ní je brzdný pás a garáž. Na které planetě kulička zeď prorazí a zastaví v garáži?',
     lesson:'Ep = m·g·h závisí i na gravitaci. Na Měsíci a Marsu nemá kulička dost energie na zeď, na Jupiteru jí zbude tolik, že projede garáží.' },
 
+  { name:'Měsíční beranidlo', tags:'hmotnost + výška',
+    track:x => 0, x0:0.6, x1:11.4, start:{x:1}, m:{value:5, options:[5,10,20,40]}, g:1.62,
+    drop:{x:6, h:5, range:[2.7,7.4], ground:1.2, top:2.4, len:2.0, F:250},
+    goal:{type:'drop', zone:[1.35,1.75]},
+    task:'Stejný kolík, ale na Měsíci. Vyber hmotnost závaží a výšku pádu tak, aby hlava kolíku skončila v zeleném pásmu.',
+    lesson:'Na Měsíci je gravitace šestkrát slabší, takže ze stejné výšky má závaží šestkrát méně energie. Musíš vzít mnohem těžší závaží.' },
+
   { name:'Planetární rozpočet', tags:'planeta + start',
     track:cosKeys([[0.6,7.4],[3.2,0.6],[6.5,4.5],[9.3,0.6],[11.8,7.2]]), x0:0.6, x1:11.8, start:{x:2.6, range:[0.9,2.9]}, m:1.5, g:{value:9.81, options:['Měsíc','Mars','Země','Jupiter']},
     budget:60, goal:{type:'apex', zone:[5.2,5.8], sideX:9.3},
@@ -310,14 +321,14 @@ const LEVELS = [
 ];
 
 let L = 0, lv, track, m, g, slow = false, state = 'place', tries = 0, runT = 0;
-let frics = [], basketA = 0, wallBroken = false, shards = [], demo = false, answered = false, apexH = null;
+let wallJ = 0, dropH = 0, sd = 0, phase = '', frics = [], basketA = 0, wallBroken = false, shards = [], demo = false, answered = false, apexH = null;
 const ball = { s:0, dir:1, Em:0, E0:0, startS:0, startH:0, angle:0, traveled:0, fx:0, fy:0, vx:0, vy:0, maxX:0, loss:0 };
 let progress = {};
 try { progress = JSON.parse(localStorage.getItem('kuryr3') || '{}'); } catch(e){ progress = {}; }
 const save = () => { try { localStorage.setItem('kuryr3', JSON.stringify(progress)); } catch(e){} };
 
 /* ---------- kód výsledku ----------
-   payload p = nejvyšší splněná úroveň (0–13) · 40 + hvězdy (0–39)  → 10 bitů
+   payload p = nejvyšší splněná úroveň (0–15) · 46 + hvězdy (0–45)  → 10 bitů
    kód = (p XOR maska z příjmení) · 32768 + kontrolní součet(příjmení, p)  → 25 bitů = 5 znaků base32
    Pro dané jméno je převod prostý a vratný; cizí jméno nebo překlep kontrolou neprojde. */
 const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
@@ -332,7 +343,7 @@ function cyrb53(str, seed = 0){
 const mask = n => cyrb53(n + '|kuryr-maska', 7) % 1024;
 const check = (n, p) => cyrb53(n + '|' + p + '|kuryr-kontrola', 11) % 32768;
 function encode(name, highest, stars){
-  const n = normName(name), p = highest*40 + stars;
+  const n = normName(name), p = highest*46 + stars;
   let v = (p ^ mask(n)) * 32768 + check(n, p), s = '';
   for (let i = 0; i < 5; i++){ s = B32[v % 32] + s; v = Math.floor(v / 32); }
   return s.slice(0,2) + '-' + s.slice(2);
@@ -343,8 +354,8 @@ function decode(name, code){
   if (!n || c.length !== 5) return null;
   let v = 0; for (const ch of c){ const d = B32.indexOf(ch); if (d < 0) return null; v = v*32 + d; }
   const p = Math.floor(v / 32768) ^ mask(n);
-  if (p >= 560 || v % 32768 !== check(n, p)) return null;
-  const highest = Math.floor(p / 40), stars = p % 40;
+  if (p >= 736 || v % 32768 !== check(n, p)) return null;
+  const highest = Math.floor(p / 46), stars = p % 46;
   if (stars > highest*3) return null;
   return { highest, stars };
 }
@@ -383,6 +394,8 @@ function loadLevel(i){
   g = gOpts() ? lv.g.value : lv.g;
   frics = (lv.friction || []).map(f => ({...f}));
   basketA = lv.goal.basket ? lv.goal.basket.a : 0;
+  wallJ = lv.wall ? lv.wall.J : 0;
+  if (lv.drop) dropH = lv.drop.h;
   $('lvnum').textContent = `Úroveň ${i+1} / ${LEVELS.length}`;
   $('lvname').textContent = lv.name; $('lvtask').textContent = lv.task;
   demo = false; answered = false;
@@ -434,6 +447,12 @@ function buildControls(){
   const box = $('controls'); box.innerHTML = '';
   const add = html => { const d = document.createElement('div'); d.className = 'ctl'; d.innerHTML = html; box.appendChild(d); return d; };
   if (lv.start.range) add('<div class="top"><span>Start kuličky</span><output>táhni po modré</output></div>');
+  if (lv.drop) add('<div class="top"><span>Výška pádu</span><output>táhni závaží nahoru a dolů</output></div>');
+  if (lv.wall && lv.wall.adj){
+    const w = lv.wall.adj;
+    const d = add(`<div class="top"><label for="wj">Pevnost zdi</label><output id="wjOut">${wallJ} J</output></div><input type="range" id="wj" min="${w[0]}" max="${w[1]}" step="${w[2]}" value="${wallJ}">`);
+    d.querySelector('input').oninput = e => { if (busy()) { e.target.value = wallJ; return; } wallJ = +e.target.value; $('wjOut').textContent = wallJ + ' J'; if (state === 'done') resetAfterLose(); else updateReadouts(); };
+  }
   if (mOpts()){
     const d = add('<div class="top"><span>Hmotnost</span></div><div class="row"></div>');
     lv.m.options.forEach(v => { const b = document.createElement('button'); b.type = 'button'; b.textContent = v + ' kg'; b.setAttribute('aria-pressed', v === m);
@@ -464,6 +483,15 @@ const sMax = () => lv.start.range ? sOfX(lv.start.range[1]) : sOfX(lv.start.x);
 const hCap = () => lv.budget ? lv.budget/(m*g) : Infinity;
 
 function place(s){
+  if (lv.drop){
+    const D = lv.drop; dropH = Math.max(D.range[0], Math.min(D.range[1], dropH));
+    ball.startH = ball.dy = dropH; ball.vy = 0; sd = 0; phase = ''; ball.fx = 0; ball.angle = 0;
+    ball.E0 = ball.Em = m*g*dropH;
+    state = 'place'; apexH = null;
+    $('result').hidden = true; $('next').hidden = true; $('retry').hidden = true; $('go').disabled = false;
+    $('hint').textContent = 'Táhni závaží nahoru nebo dolů a stiskni Pustit';
+    updateReadouts(); return;
+  }
   s = Math.max(sMin(), Math.min(sMax(), s));
   if (lv.budget){ let k = 0; while (hAt(s) > hCap() && k++ < 400) s += DS*(slopeAt(s) < 0 ? 1 : -1); }
   ball.s = s; ball.startS = s; ball.startH = hAt(s); ball.fx = 0; ball.angle = 0;
@@ -478,12 +506,13 @@ function place(s){
 }
 function updateReadouts(){
   const f = $('fixed'); const rows = [];
-  rows.push(['Výška startu', fmt(ball.startH) + ' m' + (lv.start.range ? '' : ' (pevná)')]);
+  rows.push([lv.drop ? 'Výška pádu (spodek závaží)' : 'Výška startu', fmt(ball.startH) + ' m' + (lv.start.range || lv.drop ? '' : ' (pevná)')]);
   if (!mOpts()) rows.push(['Hmotnost', fmt(m) + ' kg']); else rows.push(['Zvolená hmotnost', fmt(m) + ' kg']);
   if (!gOpts()) rows.push(['Gravitace', fmt(g,2) + ' N/kg (' + planetOf(g) + ')']); else rows.push(['Gravitace', fmt(g,2) + ' N/kg']);
   frics.forEach(fr => { if (!fr.adj) rows.push(['Tření pásu', fmt(fr.mu,2)]); });
   if (!frics.length) rows.push(['Tření', 'žádné']);
-  if (lv.wall) rows.push(['Zeď vydrží', lv.wall.J + ' J']);
+  if (lv.wall && !lv.wall.adj) rows.push(['Zeď vydrží', wallJ + ' J']);
+  if (lv.drop) rows.push(['Odpor půdy', lv.drop.F + ' N']);
   if (lv.budget) rows.push(['Rozpočet energie', lv.budget + ' J']);
   if (lv.goal.basket) rows.push(['Košík', fmt(basketA) + '–' + fmt(basketA + lv.goal.basket.w) + ' m']);
   f.innerHTML = rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
@@ -496,6 +525,7 @@ function go(){
   if (isAnswer()){ if (!answered) return; if (state === 'done') place(ball.startS); demo = true; }
   if (state !== 'place') return;
   if (!demo){ tries++; updateReadouts(); }
+  if (lv.drop){ ball.vy = 0; ball.dy = dropH; sd = 0; phase = 'fall'; ball.E0 = m*g*dropH; runT = 0; state = 'run'; $('go').disabled = true; $('hint').textContent = 'Závaží padá…'; return; }
   ball.E0 = ball.Em = m*g*ball.startH; ball.traveled = 0; ball.loss = 0; runT = 0;
   ball.dir = slopeAt(ball.s) > 0 ? -1 : 1;
   state = 'run'; $('go').disabled = true; $('hint').textContent = 'Kulička jede…';
@@ -549,7 +579,30 @@ function onRest(x){
 }
 
 /* ---------- fyzika ---------- */
+function stepDrop(dt){
+  const D = lv.drop, n = 16, h = dt/n, maxSd = D.top - D.ground;
+  for (let i = 0; i < n && state === 'run'; i++){
+    if (phase === 'fall'){
+      ball.vy -= g*h; ball.dy += ball.vy*h;
+      if (ball.dy <= D.top){ ball.dy = D.top; phase = 'drive'; dust(); }
+    } else {
+      const a = (D.F - m*g)/m; let v = -ball.vy;
+      v -= a*h; if (v < 0) v = 0;
+      sd += v*h; ball.vy = -v;
+      if (sd >= maxSd){ sd = maxSd; v = 0; ball.vy = 0; }
+      ball.dy = D.top - sd;
+      if (v === 0){
+        const [za, zb] = lv.goal.zone, c0 = (za+zb)/2, top = D.top - sd, st = grade(top, c0, (zb-za)/2);
+        if (st) finish(true, '', st, `Hlava kolíku skončila ve výšce ${fmt(top,2)} m, střed pásma je ${fmt(c0,2)} m.`);
+        else finish(false, top < za ? `Kolík je zatlučený moc hluboko (hlava ve výšce ${fmt(top,2)} m). Závaží mělo energie moc.` : `Kolík je zatlučený málo (hlava ve výšce ${fmt(top,2)} m). Závaží mělo energie málo.`);
+        return;
+      }
+    }
+  }
+}
+function dust(){ const x = lv.drop.x; for (let i = 0; i < 10; i++) shards.push({ x: x - 0.3 + Math.random()*0.6, y: lv.drop.ground + 0.05, vx: (Math.random()-0.5)*3, vy: Math.random()*2.5, r: Math.random()*6 }); }
 function step(dt){
+  if (lv.drop) return stepDrop(dt);
   if (state === 'fly') return stepFly(dt);
   if (state !== 'run') return;
   runT += dt;
@@ -570,8 +623,8 @@ function step(dt){
     // zeď
     if (lv.wall && !wallBroken && ball.dir > 0 && xAt(ns) + R >= lv.wall.x){
       const ek = ball.Em - m*g*hs;
-      if (ek >= lv.wall.J){ wallBroken = true; ball.Em -= lv.wall.J; ball.loss += lv.wall.J; burst(); }
-      else { finish(false, `Náraz měl jen ${Math.round(ek)} J pohybové energie, zeď vydrží ${lv.wall.J} J.`); return; }
+      if (ek >= wallJ){ wallBroken = true; ball.Em -= wallJ; ball.loss += wallJ; burst(); }
+      else { finish(false, `Náraz měl jen ${Math.round(ek)} J pohybové energie, zeď vydrží ${wallJ} J. Kulička se odrazila.`); return; }
     }
     if (ns <= 0 || ns >= track.L){ ns = Math.max(0, Math.min(track.L, ns)); ball.dir *= -1; }
     if (2*(ball.Em/m - g*hAt(ns)) < 0){
@@ -611,7 +664,7 @@ function burst(){
   const w = lv.wall, base = hAt(sOfX(w.x));
   for (let i = 0; i < 14; i++) shards.push({ x: w.x + Math.random()*0.3, y: base + Math.random()*1.2, vx: 1 + Math.random()*3, vy: Math.random()*3, r: Math.random()*6 });
 }
-function stepShards(dt){ shards.forEach(p => { p.vy -= 9.81*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.r += dt*4; if (p.y < 0.1){ p.y = 0.1; p.vx *= 0.8; p.vy = 0; } }); }
+function stepShards(dt){ const fl = lv && lv.drop ? lv.drop.ground : 0.1; shards.forEach(p => { p.vy -= 9.81*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.r += dt*4; if (p.y < fl){ p.y = fl; p.vx *= 0.8; p.vy = 0; } }); }
 
 /* ---------- kreslení ---------- */
 let k = 1, dpr = 1;
@@ -639,6 +692,7 @@ function draw(){
   for (let j = 1; j < H; j++) ctx.fillText(j + ' m', 4, Y(j) - 4);
   for (let i = 2; i < W; i += 2) ctx.fillText(i + ' m', X(i) + 3, ch - 4);
 
+  if (lv.drop) return drawDrop(c, cw, ch);
   const G = lv.goal;
   if (G.type === 'apex'){
     const [a,b] = G.zone, c0 = (a+b)/2, hf = (b-a)/2;
@@ -685,7 +739,7 @@ function draw(){
       for (let r = 0; r < 4; r++) for (let q = 0; q < 1; q++){
         ctx.fillStyle = c.brick; ctx.fillRect(X(w.x), Y(base + (r+1)*bh), bw*k - 1, bh*k - 2);
       }
-      ctx.fillStyle = c.brick; ctx.font = font(700,.24); ctx.fillText('zeď ' + w.J + ' J', X(w.x) - 0.2*k, Y(base + 1.4));
+      ctx.fillStyle = c.brick; ctx.font = font(700,.24); ctx.fillText('zeď ' + wallJ + ' J', X(w.x) - 0.2*k, Y(base + 1.4));
     }
     shards.forEach(p => { ctx.save(); ctx.translate(X(p.x), Y(p.y)); ctx.rotate(p.r); ctx.fillStyle = c.brick; ctx.fillRect(-0.07*k, -0.05*k, 0.14*k, 0.1*k); ctx.restore(); });
   }
@@ -709,7 +763,47 @@ function draw(){
   if (mOpts()){ ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.2)}px "IBM Plex Mono", monospace`; ctx.fillText(m + ' kg', X(bx) + r + 4, Y(by) - r); }
 }
 
+function drawBall(c, bx, by){
+  const r = R*k*Math.min(1.6, 0.8 + m*0.08);
+  ctx.beginPath(); ctx.arc(X(bx), Y(by), r, 0, Math.PI*2); ctx.fillStyle = c.ball; ctx.fill();
+  ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(X(bx)-r*.3, Y(by)-r*.3, r*.28, 0, Math.PI*2); ctx.fillStyle = c['ball-hi']; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.fillStyle = c.muted; ctx.font = `500 ${Math.max(10, k*0.2)}px "IBM Plex Mono", monospace`; ctx.fillText(m + ' kg', X(bx) + r + 4, Y(by) - r*0.4);
+  return r;
+}
+function drawDrop(c, cw, ch){
+  const D = lv.drop, x = D.x, top = D.top - sd, tip = D.top - D.len - sd;
+  // půda
+  ctx.fillStyle = c['track-fill']; ctx.fillRect(0, Y(D.ground), cw, ch - Y(D.ground));
+  ctx.fillStyle = c['track-fill']; ctx.fillRect(0, Y(D.ground), cw, ch - Y(D.ground));
+  ctx.strokeStyle = c.ink; ctx.lineWidth = Math.max(3, k*0.09); ctx.beginPath(); ctx.moveTo(0, Y(D.ground)); ctx.lineTo(cw, Y(D.ground)); ctx.stroke();
+  ctx.fillStyle = c.muted; ctx.font = font(600,.22); ctx.fillText('půda, odpor ' + D.F + ' N', 8, Y(D.ground) + Math.max(18, k*.42));
+  // cílové pásmo pro hlavu kolíku
+  const [za, zb] = lv.goal.zone, c0 = (za+zb)/2, hf = (zb-za)/2;
+  BANDS.forEach(f => { ctx.fillStyle = c['goal-fill']; ctx.fillRect(X(x - 1.4), Y(c0 + hf*f), X(x + 1.4) - X(x - 1.4), Y(c0 - hf*f) - Y(c0 + hf*f)); });
+  ctx.fillStyle = c.goal; ctx.font = font(700,.22); ctx.fillText('cíl pro hlavu kolíku', X(x + 1.5), Y(c0) + 5);
+  // kolík
+  ctx.fillStyle = c.brick; ctx.beginPath();
+  ctx.moveTo(X(x - 0.15), Y(top)); ctx.lineTo(X(x + 0.15), Y(top)); ctx.lineTo(X(x + 0.15), Y(tip + 0.25)); ctx.lineTo(X(x), Y(tip)); ctx.lineTo(X(x - 0.15), Y(tip + 0.25)); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = c.ink; ctx.fillRect(X(x - 0.2), Y(top), X(x + 0.2) - X(x - 0.2), 0.08*k);
+  // jeřáb
+  const px = x + 1.0, armY = 7.7;
+  ctx.strokeStyle = c.muted; ctx.lineWidth = Math.max(3, k*0.07);
+  ctx.beginPath(); ctx.moveTo(X(px), Y(D.ground)); ctx.lineTo(X(px), Y(armY)); ctx.lineTo(X(x - 0.3), Y(armY)); ctx.stroke();
+  // výšky
+  hline(c, dropH, c.ep, 'pád z ' + fmt(dropH) + ' m', [8,6]);
+  ctx.setLineDash([3,4]); ctx.strokeStyle = c.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Y(D.top)); ctx.lineTo(X(x - 0.3), Y(D.top)); ctx.stroke(); ctx.setLineDash([]);
+  // závaží
+  const by = ball.dy + R*Math.min(1.6, 0.8 + m*0.08);
+  if (state === 'place' || phase === ''){ ctx.strokeStyle = c.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(x), Y(armY)); ctx.lineTo(X(x), Y(by)); ctx.stroke(); }
+  drawBall(c, x, by);
+  shards.forEach(p => { ctx.fillStyle = c.muted; ctx.fillRect(X(p.x), Y(p.y), 0.08*k, 0.08*k); });
+}
 function meters(){
+  if (lv.drop){
+    const ep = m*g*ball.dy, ek = 0.5*m*ball.vy*ball.vy, tot = Math.max(1, ball.E0), lost = Math.max(0, tot - ep - ek);
+    $('fEp').style.width = Math.min(100, ep/tot*100) + '%'; $('fEk').style.width = Math.min(100, ek/tot*100) + '%'; $('fHeat').style.width = Math.min(100, lost/tot*100) + '%';
+    return;
+  }
   let ep, ek;
   if (state === 'fly' || ball.fx){ ep = m*g*Math.max(0, ball.fy - LIFT); ek = 0.5*m*(ball.vx*ball.vx + ball.vy*ball.vy); }
   else { ep = m*g*hAt(ball.s); ek = Math.max(0, ball.Em - ep); }
@@ -763,11 +857,17 @@ function nearestStart(p){
   return { s: best, d: bd };
 }
 cv.addEventListener('pointerdown', ev => {
-  if (busy() || !lv.start.range) return;
+  if (busy()) return;
+  if (lv.drop){
+    const p = toWorld(ev);
+    if (Math.abs(p.x - lv.drop.x) < 2){ cv.setPointerCapture(ev.pointerId); dragging = true; dropH = p.y - R*Math.min(1.6, 0.8 + m*0.08); place(0); }
+    return;
+  }
+  if (!lv.start.range) return;
   const q = nearestStart(toWorld(ev));
   if (q.d < 2){ cv.setPointerCapture(ev.pointerId); dragging = true; const t = tries; place(q.s); tries = t; updateReadouts(); }
 });
-cv.addEventListener('pointermove', ev => { if (dragging){ const t = tries; place(nearestStart(toWorld(ev)).s); tries = t; updateReadouts(); } });
+cv.addEventListener('pointermove', ev => { if (dragging && lv.drop){ dropH = toWorld(ev).y - R*Math.min(1.6, 0.8 + m*0.08); place(0); return; } if (dragging){ const t = tries; place(nearestStart(toWorld(ev)).s); tries = t; updateReadouts(); } });
 cv.addEventListener('pointerup', () => { dragging = false; });
 cv.addEventListener('pointercancel', () => { dragging = false; });
 $('go').onclick = go;
